@@ -50,9 +50,8 @@ class GroupingExpr implements Expr {
 class UnaryExpr implements Expr {
   Token op;
   Expr expression;
-  bool prefix;
 
-  UnaryExpr(this.op, this.expression, this.prefix);
+  UnaryExpr(this.op, this.expression);
 
   @override
   Object accept(ExprVisitor visitor) {
@@ -114,7 +113,7 @@ class TernaryExpr implements Expr {
 
 class AssignExpr implements Expr {
   Token op;
-  Token target;
+  Expr target;
   Expr value;
 
   AssignExpr(this.op, this.target, this.value);
@@ -122,21 +121,6 @@ class AssignExpr implements Expr {
   @override
   Object accept(ExprVisitor visitor) {
     return visitor.visitAssignExpr(this);
-  }
-
-  @override
-  Type type;
-}
-
-class ParamExpr implements Expr {
-  Token name;
-  Token m_type;
-
-  ParamExpr(this.name, this.m_type);
-
-  @override
-  Object accept(ExprVisitor visitor) {
-    return visitor.visitParamExpr(this);
   }
 
   @override
@@ -191,10 +175,6 @@ abstract class ExprVisitor {
 	}
 
 	visitUnaryExpr(UnaryExpr expr) {
-		return expr.accept(this);
-	}
-
-	visitParamExpr(ParamExpr expr) {
 		return expr.accept(this);
 	}
 

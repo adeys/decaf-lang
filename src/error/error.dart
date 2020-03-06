@@ -1,19 +1,19 @@
 
 import '../lexer/tokens.dart';
 
-class Error {
+class CompilerError extends Error {
   String message;
 
-  Error(this.message);
+  CompilerError(this.message);
 }
 
-class SyntaxError extends Error {
+class SyntaxError extends CompilerError {
   int line;
 
   SyntaxError(this.line, String message): super(message);
 }
 
-class ParseError extends Error {
+class ParseError extends CompilerError {
   Token token;
 
   ParseError(this.token, String message): super(message);

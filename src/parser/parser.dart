@@ -3,6 +3,7 @@ import '../ast/statement.dart';
 import '../error/error.dart';
 import '../lexer/tokens.dart';
 import '../types/type.dart';
+import 'rules.dart';
 
 Map<TokenType, Type> typeMap = {
   TokenType.KW_INT: BuiltinType.INT,
@@ -16,10 +17,62 @@ class Parser {
   final List<Token> _tokens;
   List<TokenType> _types = [TokenType.KW_INT, TokenType.KW_DOUBLE, TokenType.KW_BOOL, TokenType.KW_STRING];
   Token _previous;
+  
+  Map<TokenType, ParseRule> _rules = {};
+
   int offset = 0;
 
   Parser(this._tokens) {
     _previous = _tokens[0];
+
+    PrefixRule literal = new PrefixRule(Precedence.NONE, _getPrimary);
+    PrefixRule unary = new PrefixRule(Precedence.UNARY, _getUnary);
+
+    //InfixRule dot = new InfixRule(Precedence.CALL, null, _getDot);
+    InfixRule group = new InfixRule(Precedence.CALL, _getGroupingExpr, _getCall);
+    
+    InfixRule assign = new InfixRule(Precedence.ASSIGNMENT, null, _getAssignment);
+    InfixRule equality = new InfixRule(Precedence.EQUALITY);
+    InfixRule comparison = new InfixRule(Precedence.COMPARISON);
+    InfixRule sum = new InfixRule(Precedence.SUM);
+    InfixRule product = new InfixRule(Precedence.PRODUCT);
+    
+    _rules = {
+      // Literals
+      TokenType.TRUE: literal,
+      TokenType.FALSE: literal,
+      TokenType.STRING: literal,
+      TokenType.DOUBLE: literal,
+      TokenType.INTEGER: literal,
+      TokenType.IDENTIFIER: literal,
+
+      // Unary
+      TokenType.MINUS: unary,
+      TokenType.BANG: unary,
+
+      // Misc
+      TokenType.LEFT_PAREN: group,
+      //TokenType.DOT: dot,
+
+      // Binary
+      TokenType.EQUAL: assign,
+      TokenType.EQUAL_EQUAL: equality,
+      TokenType.BANG_EQUAL: equality,
+
+      TokenType.LESS: comparison,
+      TokenType.LESS_EQUAL: comparison,
+      TokenType.GREATER: comparison,
+      TokenType.GREATER_EQUAL: comparison,
+
+      TokenType.AMP_AMP: new InfixRule(Precedence.AND, null, _getLogical),
+      TokenType.PIPE_PIPE: new InfixRule(Precedence.OR, null, _getLogical),
+
+      TokenType.PLUS: sum,
+      TokenType.MINUS: sum,
+      TokenType.STAR: product,
+      TokenType.SLASH: product,
+      TokenType.PERCENT: product
+    };
   }
 
   List<Stmt> parse() {
@@ -151,7 +204,7 @@ class Parser {
     
     do {
       exprs.add(_getExpression());
-    } while (!_check(TokenType.COMMA));
+    } while (_match([TokenType.COMMA]));
 
     _expect(TokenType.RIGHT_PAREN, "Expect ')' after print arguments list.");
     _expect(TokenType.SEMICOLON, "Expect ';' after print statement.");
@@ -187,7 +240,7 @@ class Parser {
     List<Stmt> statements = [];
 
     while (!_check(TokenType.RIGHT_BRACE)) {
-      statements.add(_matchType() ? _getVarDeclaration() : _getStatement());
+      statements.add(_types.contains(_peek().type) ? _getVarDeclaration() : _getStatement());
     }
 
     _expect(TokenType.RIGHT_BRACE, "Expect '}' at block end.");
@@ -197,14 +250,102 @@ class Parser {
 
   ExpressionStmt _getExpressionStmt() {
     Expr expr = _getExpression();
-    _expect(TokenType.SEMICOLON, "Expect ';' after expression.");
+    _expect(TokenType.SEMICOLON, "Unexpected '${_peek().lexeme}'. Expect ';' after expression.");
 
     return new ExpressionStmt(expr);
   }
 
   // Expressions parsing
   Expr _getExpression() {
+    return _parsePrecedence(Precedence.NONE);
+  }
 
+  Expr _parsePrecedence(int precedence, [bool assoc = true]) {
+    Token current = _advance();
+
+    ParseRule rule = _rules[current.type];
+    if (rule == null || rule.prefix == null) {
+      throw new ParseError(current, "Unexpected '${current.lexeme}'. Expected expression.");
+    }
+
+    Expr left = rule.prefix();
+    
+    int currPrec;
+    while ((currPrec = _getPrecedence(_peek())) > precedence) {
+      _advance();
+      left = (_rules[_previous.type].postfix ?? _getBinary)(left, currPrec);
+    }
+
+    return left;
+  }
+
+  int _getPrecedence(Token token) {
+    return _rules[token.type]?.precedence ?? -1;
+  }
+
+  LogicalExpr _getLogical(Expr left, int nextPrecedence) {
+    Token op = _previous;
+    Expr right = _parsePrecedence(nextPrecedence);
+    
+    return new LogicalExpr(op, left, right);
+  }
+
+  BinaryExpr _getBinary(Expr left, int nextPrecedence) {
+    Token op = _previous;
+    Expr right = _parsePrecedence(nextPrecedence);
+    
+    return new BinaryExpr(op, left, right);
+  }
+
+  UnaryExpr _getUnary() {
+    Token op = _previous;
+    Expr right = _parsePrecedence(Precedence.UNARY);
+
+    return new UnaryExpr(op, right);
+  }
+
+  GroupingExpr _getGroupingExpr() {
+    Expr expression = _getExpression();
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after group expression.");
+
+    return new GroupingExpr(expression);
+  }
+
+  AssignExpr _getAssignment(Expr left, int _) {
+    if (left is! VariableExpr) throw new ParseError(_previous, "Invalid assignment target.");
+
+    Token keyword = _previous;
+    Expr value = _parsePrecedence(Precedence.ASSIGNMENT);
+
+    return new AssignExpr(keyword, left, value);
+  }
+
+  CallExpr _getCall(Expr callee, int _) {
+    Token paren = _previous;
+    List<Expr> params = [];
+    if (!_check(TokenType.RIGHT_PAREN)) {
+      do {
+        params.add(_getExpression());
+      } while (_match([TokenType.COMMA]));
+    }
+
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after call parameters.");
+
+    return new CallExpr(paren, callee, params);
+  }
+
+  Expr _getPrimary() {
+    switch (_previous.type) {
+      case TokenType.NULL: return new LiteralExpr(BuiltinType.NULL, null);
+      case TokenType.TRUE: return new LiteralExpr(BuiltinType.BOOL, true);
+      case TokenType.FALSE: return new LiteralExpr(BuiltinType.BOOL, false);
+      case TokenType.INTEGER: return new LiteralExpr(BuiltinType.INT, _previous.value);
+      case TokenType.DOUBLE: return new LiteralExpr(BuiltinType.DOUBLE, _previous.value);
+      case TokenType.STRING: return new LiteralExpr(BuiltinType.STRING, _previous.value);
+      case TokenType.IDENTIFIER: return new VariableExpr(_previous);
+      default:
+        throw new ParseError(_previous, 'Should never be reached.');
+    }
   }
 
   // Parsing functions

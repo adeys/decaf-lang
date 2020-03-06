@@ -9,6 +9,7 @@ class BuiltinType extends Type {
   static BuiltinType VOID = new BuiltinType('void');
   static BuiltinType STRING = new BuiltinType('string');
   static BuiltinType DOUBLE = new BuiltinType('double');
+  static BuiltinType NULL = new BuiltinType('null');
 
   BuiltinType(this.name);
 
