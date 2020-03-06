@@ -3,6 +3,8 @@ import 'dart:io';
 import 'src/error/error_reporter.dart';
 import 'src/lexer/lexer.dart';
 import 'src/parser/parser.dart';
+import 'src/semantic/resolver.dart';
+import 'src/symbol/symbol.dart';
 
 Object run(String program) {
   try {
@@ -11,7 +13,16 @@ Object run(String program) {
     var tokens = lexer.tokenize();
     Parser parser = new Parser(tokens);
 
-    return parser.parse(); 
+    var ast = parser.parse();
+    if (ErrorReporter.hadError) exit(65);
+
+    SymbolTable symbols = new SymbolTable();
+    Resolver resolver = new Resolver(symbols);
+
+    resolver.resolve(ast);
+    if (ErrorReporter.hadError) exit(65);
+
+    return ast; 
   } catch (e) {
     ErrorReporter.report(e);
     return null;

@@ -94,23 +94,6 @@ class LogicalExpr implements Expr {
   Type type;
 }
 
-class TernaryExpr implements Expr {
-  Token op;
-  Expr cond;
-  Expr thenExpr;
-  Expr elseExpr;
-
-  TernaryExpr(this.op, this.cond, this.thenExpr, this.elseExpr);
-
-  @override
-  Object accept(ExprVisitor visitor) {
-    return visitor.visitTernaryExpr(this);
-  }
-
-  @override
-  Type type;
-}
-
 class AssignExpr implements Expr {
   Token op;
   Expr target;
@@ -147,10 +130,6 @@ class CallExpr implements Expr {
 abstract class ExprVisitor {
 
 	visitAssignExpr(AssignExpr expr) {
-		return expr.accept(this);
-	}
-
-	visitTernaryExpr(TernaryExpr expr) {
 		return expr.accept(this);
 	}
 

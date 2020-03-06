@@ -16,6 +16,8 @@ class Lexer {
     "string": TokenType.KW_STRING,
     "bool": TokenType.KW_BOOL,
     "void": TokenType.KW_VOID,
+    "true": TokenType.TRUE,
+    "false": TokenType.FALSE,
     "class": TokenType.CLASS,
     "interface": TokenType.INTERFACE,
     "null": TokenType.NULL,

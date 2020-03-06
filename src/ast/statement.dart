@@ -123,7 +123,7 @@ class FunctionStmt implements Stmt {
   Token name;
   Type returnType;
   List<VarStmt> params;
-  List<Stmt> body;
+  BlockStmt body;
 
   FunctionStmt(this.name, this.params, this.returnType, this.body);
 

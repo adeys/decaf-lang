@@ -18,3 +18,9 @@ class ParseError extends CompilerError {
 
   ParseError(this.token, String message): super(message);
 }
+
+class SemanticError extends CompilerError {
+  Token token;
+
+  SemanticError(this.token, String message): super(message);
+}

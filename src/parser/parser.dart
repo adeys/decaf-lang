@@ -1,6 +1,7 @@
 import '../ast/expression.dart';
 import '../ast/statement.dart';
 import '../error/error.dart';
+import '../error/error_reporter.dart';
 import '../lexer/tokens.dart';
 import '../types/type.dart';
 import 'rules.dart';
@@ -39,6 +40,7 @@ class Parser {
     
     _rules = {
       // Literals
+      TokenType.NULL: literal,
       TokenType.TRUE: literal,
       TokenType.FALSE: literal,
       TokenType.STRING: literal,
@@ -86,18 +88,28 @@ class Parser {
   }
 
   Stmt _getDeclaration() {
-    if (_matchReturnType()) {
-      Token type = _previous;
-      Token name = _expect(TokenType.IDENTIFIER, 'Expect name after type.');
+    try {
+      if (_matchReturnType()) {
+        Token type = _previous;
+        Token name = _expect(TokenType.IDENTIFIER, 'Expect name after type.');
+        
+        if (type.type != TokenType.KW_VOID && !_check(TokenType.LEFT_PAREN)) {
+          // If the type is not 'void' and we dont have a '(' after symbol name
+          // rewind and get a variable declaration
+          offset -= 2;
+          return _getVarDeclaration();
+        }
+        
+        _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");
+        return _getFuncDeclaration(type, name);
+      }
       
-      if (type.type != TokenType.KW_VOID && _match([TokenType.SEMICOLON])) 
-        return new VarStmt(typeMap[type.type], name, null);
-      
-      _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");
-      return _getFuncDeclaration(type, name);
+      throw new ParseError(_peek(), "Unexpected token '${_peek().lexeme}'");
+    } on ParseError catch (e) {
+      ErrorReporter.report(e);
+      _synchronize();
+      return null;
     }
-    
-    throw new ParseError(_peek(), "Unexpected token '${_peek().lexeme}'");
   }
 
   VarStmt _getVariable() {
@@ -109,6 +121,10 @@ class Parser {
 
   VarStmt _getVarDeclaration() {
     VarStmt stmt = _getVariable();
+
+    if (_match([TokenType.EQUAL])) {
+      stmt.initializer = _getPrimary();
+    }
 
     _expect(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
     return stmt;
@@ -129,9 +145,8 @@ class Parser {
 
     BlockStmt body = _getBlockStatement();
 
-    return new FunctionStmt(name, params, typeMap[returnType], body.statements);
+    return new FunctionStmt(name, params, typeMap[returnType], body);
   }
-
 
   // Statements parsing functions
   Stmt _getStatement() {
@@ -190,7 +205,7 @@ class Parser {
 
 
   BreakStmt _getBreakStatement() {
-    Token keyword;
+    Token keyword = _previous;
     _expect(TokenType.SEMICOLON, "Expect ';' after break statement.");
 
     return new BreakStmt(keyword);
@@ -261,7 +276,7 @@ class Parser {
   }
 
   Expr _parsePrecedence(int precedence, [bool assoc = true]) {
-    Token current = _advance();
+    Token current = _peek();
 
     ParseRule rule = _rules[current.type];
     if (rule == null || rule.prefix == null) {
@@ -298,13 +313,15 @@ class Parser {
   }
 
   UnaryExpr _getUnary() {
-    Token op = _previous;
+    Token op = _advance();
     Expr right = _parsePrecedence(Precedence.UNARY);
 
     return new UnaryExpr(op, right);
   }
 
   GroupingExpr _getGroupingExpr() {
+    // Consume '('
+    _advance();
     Expr expression = _getExpression();
     _expect(TokenType.RIGHT_PAREN, "Expect ')' after group expression.");
 
@@ -335,20 +352,46 @@ class Parser {
   }
 
   Expr _getPrimary() {
-    switch (_previous.type) {
-      case TokenType.NULL: return new LiteralExpr(BuiltinType.NULL, null);
-      case TokenType.TRUE: return new LiteralExpr(BuiltinType.BOOL, true);
-      case TokenType.FALSE: return new LiteralExpr(BuiltinType.BOOL, false);
-      case TokenType.INTEGER: return new LiteralExpr(BuiltinType.INT, _previous.value);
-      case TokenType.DOUBLE: return new LiteralExpr(BuiltinType.DOUBLE, _previous.value);
-      case TokenType.STRING: return new LiteralExpr(BuiltinType.STRING, _previous.value);
-      case TokenType.IDENTIFIER: return new VariableExpr(_previous);
-      default:
-        throw new ParseError(_previous, 'Should never be reached.');
-    }
+      if (_match([TokenType.NULL])) return new LiteralExpr(BuiltinType.NULL, null);
+      if (_match([TokenType.TRUE])) return new LiteralExpr(BuiltinType.BOOL, true);
+      if (_match([TokenType.FALSE])) return new LiteralExpr(BuiltinType.BOOL, false);
+      if (_match([TokenType.INTEGER])) return new LiteralExpr(BuiltinType.INT, _previous.value);
+      if (_match([TokenType.DOUBLE])) return new LiteralExpr(BuiltinType.DOUBLE, _previous.value);
+      if (_match([TokenType.STRING])) return new LiteralExpr(BuiltinType.STRING, _previous.value);
+      if (_match([TokenType.IDENTIFIER])) return new VariableExpr(_previous);
+      
+      throw new ParseError(_peek(), "Unexpected '${_peek().lexeme}' Expected constant or variable expression.");
   }
 
   // Parsing functions
+
+  void _synchronize() {
+		_advance();
+
+		while (!isAtEnd()) {
+			if (_previous.type == TokenType.EOF) return;
+
+			switch (_peek().type) {
+				case TokenType.KW_BOOL:
+				case TokenType.KW_INT:
+				case TokenType.KW_VOID:
+				case TokenType.KW_DOUBLE:
+				case TokenType.KW_STRING:
+				case TokenType.CLASS:
+				//case TokenType.IF:
+				//case TokenType.ELSE:
+				//case TokenType.FOR:
+				//case TokenType.WHILE:
+				//case TokenType.PRINT:
+				//case TokenType.RETURN:
+					return;
+				default:
+					_advance();
+			}
+		}
+	}
+
+
   bool _check(TokenType type) {
     if (isAtEnd()) return false;
 
