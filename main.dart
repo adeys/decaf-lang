@@ -1,15 +1,19 @@
 import 'dart:io';
 
-import 'src/error/error.dart';
+import 'src/error/error_reporter.dart';
 import 'src/lexer/lexer.dart';
+import 'src/parser/parser.dart';
 
 Object run(String program) {
   try {
     Lexer lexer = new Lexer(program);
 
-    return lexer.tokenize(); 
-  } on SyntaxError catch (e) {
-    print('[line ${e.line}] SyntaxError : ' + e.message);
+    var tokens = lexer.tokenize();
+    Parser parser = new Parser(tokens);
+
+    return parser.parse(); 
+  } catch (e) {
+    ErrorReporter.report(e);
     return null;
   }
 }
