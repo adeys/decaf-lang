@@ -2,11 +2,16 @@ import 'dart:io';
 
 import 'src/error/error.dart';
 import 'src/error/error_reporter.dart';
+import 'src/interpreter/interpreter.dart';
+import 'src/interpreter/value.dart';
 import 'src/lexer/lexer.dart';
 import 'src/parser/parser.dart';
 import 'src/semantic/analyzer.dart';
 import 'src/semantic/resolver.dart';
 import 'src/symbol/symbol.dart';
+
+
+ SymbolTable symbols = new SymbolTable();
 
 Object run(String program) {
   try {
@@ -18,7 +23,6 @@ Object run(String program) {
     var ast = parser.parse();
     if (ErrorReporter.hadError) exit(65);
 
-    SymbolTable symbols = new SymbolTable();
     Resolver resolver = new Resolver(symbols);
 
     resolver.resolve(ast);
@@ -28,7 +32,11 @@ Object run(String program) {
     analyzer.check(ast);
     if (ErrorReporter.hadError) exit(65);
 
-    return ast; 
+    Interpreter interpreter = new Interpreter(symbols);
+    Value result = interpreter.evaluate(ast);
+    if (ErrorReporter.hadRuntimeError) exit(70);
+
+    return result; 
   } on CompilerError catch (e) {
     ErrorReporter.report(e);
     return null;

@@ -175,16 +175,16 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitVarStmt(VarStmt stmt) {
     String name = stmt.name.lexeme;
 
-    if (symbols.inScope(name)) {
-      ErrorReporter.report(new SemanticError(stmt.name, "Name '$name' has already been declared in this scope."));
-    }
-
     Symbol symbol = new Symbol(name);
     if (stmt.initializer != null) {
       _resolve(stmt.initializer);
     }
 
-    symbols.addSymbol(symbol);
+    if (symbols.inScope(name)) {
+      ErrorReporter.report(new SemanticError(stmt.name, "Name '$name' has already been declared in this scope."));
+    } else {
+      symbols.addSymbol(symbol);
+    }
   }
 
   @override

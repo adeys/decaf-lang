@@ -30,3 +30,10 @@ class TypeError extends CompilerError {
 
   TypeError(this.line, String message): super(message);
 }
+
+class RuntimeError extends CompilerError {
+  Token token;
+
+  RuntimeError(this.token, String message) : super(message);
+  
+}

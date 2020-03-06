@@ -10,9 +10,9 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   int scope = 0;
 
   Analyzer(this.symbols) {
-    /*for (int i = 0; i < this.symbols.scopes.length; i++) {
+    for (int i = 0; i < this.symbols.scopes.length; i++) {
       print( "$i -> ${symbols.scopes[i].symbols.keys} -> ${symbols.scopes[i].enclosing?.symbols?.keys}");
-    }*/
+    }
   }
 
   void check(List<Stmt> ast) {
@@ -30,11 +30,12 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   }
 
   void enterScope() {
+    //print(symbols.scopes[scope].symbols.keys.toString() + ' -> ' + scope.toString());
     scope++;
   }
 
   void exitScope() {
-    //scope--;
+    scope--;
   }
 
   void checkCompatible(Type expected, Type current, int line) {
@@ -85,30 +86,31 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       case '*':
       case '/':
       case '%': 
-        return checkBinary(expr);
+        return expr.type = checkBinary(expr);
       case '<':
       case '<=':
       case '>':
       case '>=':
         Type type = checkBinary(expr);
-        return type != null ?  BuiltinType.BOOL : type;
+        expr.type = type != null ?  BuiltinType.BOOL : type;
+        return expr.type;
       case '==':
       case '!=':
         Type left = resolveType(expr.left);
         Type right = resolveType(expr.left);
         if (!left.check(right)) {
           ErrorReporter.report(new TypeError(expr.op.line, "Operands to '${expr.op.lexeme}' must be of same type. Got('$left' and '$right')."));
-          return BuiltinType.ERROR;
+          return expr.type = BuiltinType.ERROR;
         }
 
-        return BuiltinType.BOOL;
+        return expr.type = BuiltinType.BOOL;
       default:
     }
   }
 
   @override
   visitBlockStmt(BlockStmt stmt) {
-    enterScope();
+    enterScope();print('In block -> $scope');
     for (Stmt stmt in stmt.statements) {
       resolve(stmt);
     }
@@ -144,7 +146,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       }
     }
 
-    return func.returnType;
+    return expr.type = func.returnType;
   }
 
   @override
@@ -165,7 +167,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   visitFunctionStmt(FunctionStmt stmt) {
     Symbol symbol = symbols.getFrom(scope, stmt.name.lexeme);
 
-    enterScope();
+    enterScope();print('In function -> $scope');
 
     List<Type> params = [];
     for (VarStmt param in stmt.params) {
@@ -181,7 +183,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitGroupingExpr(GroupingExpr expr) {
-    return resolveType(expr.expression);
+    return expr.type = resolveType(expr.expression);
   }
 
   @override
@@ -211,7 +213,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       ErrorReporter.report(new TypeError(line, "Right operand to '${expr.op.lexeme}' must be of type bool."));
     }
 
-    return BuiltinType.BOOL;
+    return expr.type = BuiltinType.BOOL;
   }
 
   @override
@@ -246,20 +248,21 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     Type type = resolveType(expr.expression);
     if (expr.op.lexeme == '!') {
       checkCompatible(BuiltinType.BOOL, type, expr.op.line);
-      return BuiltinType.BOOL;
+      return expr.type = BuiltinType.BOOL;
     } else {
       String name = (type as BuiltinType).name;
       if (name != 'int' && name != 'double') {
         ErrorReporter.report(new TypeError(expr.op.line, "Operands to unary '-' must be either of type 'int'or 'double'."));
       }
 
-      return type;
+      return expr.type = type;
     }
   }
 
   @override
   visitVarStmt(VarStmt stmt) {
     Symbol symbol = symbols.getAt(scope, stmt.name.lexeme);
+    //print(stmt.name.lexeme);print(scope);
     symbol.type = stmt.type;
 
     if (stmt.initializer != null) {
