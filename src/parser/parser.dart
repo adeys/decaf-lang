@@ -123,7 +123,7 @@ class Parser {
     VarStmt stmt = _getVariable();
 
     if (_match([TokenType.EQUAL])) {
-      stmt.initializer = _getPrimary();
+      stmt.initializer = (_check(TokenType.MINUS) || _check(TokenType.BANG)) ? _getUnary() : _getPrimary();
     }
 
     _expect(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
@@ -145,7 +145,7 @@ class Parser {
 
     BlockStmt body = _getBlockStatement();
 
-    return new FunctionStmt(name, params, typeMap[returnType], body);
+    return new FunctionStmt(name, params, typeMap[returnType.type], body);
   }
 
   // Statements parsing functions

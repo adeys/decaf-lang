@@ -17,7 +17,9 @@ enum LoopScope {
 class Resolver implements StmtVisitor, ExprVisitor {
   SymbolTable symbols;
   Scope scope = Scope.GLOBAL;
+  FunctionStmt currentFunc;
   LoopScope loop = LoopScope.NONE;
+  List<int> scopes = [];
 
   Resolver(this.symbols) {
     
@@ -86,9 +88,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     LoopScope enclosing = loop;
     loop = LoopScope.LOOP;
     
-    symbols.beginScope();
     _resolve(stmt.body);
-    symbols.endScope();
 
     loop = enclosing;
   }
@@ -107,6 +107,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     Scope enclosing = scope;
     scope = Scope.FUNCTION;
+    currentFunc = stmt;
 
     symbols.beginScope();
     for (VarStmt param in stmt.params) {
@@ -118,6 +119,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     symbols.endScope();
 
     scope = enclosing;
+    currentFunc = null;
   }
 
   @override
@@ -155,8 +157,10 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitReturnStmt(ReturnStmt stmt) {
     if (scope != Scope.FUNCTION) {
       ErrorReporter.report(new SemanticError(stmt.keyword, "Cannot return from a non-function scope."));
+    } else {
+      stmt.expectedType = currentFunc.returnType;
     }
-
+    
     if (stmt.value != null) {
       _resolve(stmt.value);
     }
@@ -196,9 +200,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     LoopScope enclosing = loop;
     loop = LoopScope.LOOP;
     
-    symbols.beginScope();
     _resolve(stmt.body);
-    symbols.endScope();
 
     loop = enclosing;
   }

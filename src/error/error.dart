@@ -24,3 +24,9 @@ class SemanticError extends CompilerError {
 
   SemanticError(this.token, String message): super(message);
 }
+
+class TypeError extends CompilerError {
+  int line;
+
+  TypeError(this.line, String message): super(message);
+}

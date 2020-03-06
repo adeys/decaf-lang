@@ -1,3 +1,6 @@
+import '../types/type.dart';
+import 'scope.dart';
+
 class Symbol {
   String name;
   Type type;
@@ -6,37 +9,56 @@ class Symbol {
 }
 
 class SymbolTable {
-  List<Map<String, Symbol>> _symbols = [];
-  int scope = -1;
+  List<Scope> scopes = [];
+  Scope current;
 
-  void beginScope() {
-    _symbols.add(new Map<String, Symbol>());
-    scope++;
+  SymbolTable() {
+    
   }
 
-  void endScope() {
-    scope--;
+  void beginScope() {
+    current = new Scope(current);
+    scopes.add(current);
+  }
+
+  int endScope() {
+    current = current.enclosing;
+    return scopes.length - 1;
   }
 
   void addSymbol(Symbol symbol) {
-    _symbols[scope][symbol.name] = symbol;
+    current.addSymbol(symbol);
   }
 
   bool inScope(String symbol) {
-    return _symbols[scope].containsKey(symbol);
+    return current.has(symbol);
   }
 
   bool hasSymbol(String symbol) {
-    for (int i = scope; i >= 0; i--) {
-      if (_symbols[i].containsKey(symbol)) {
-        return true;
-      }
+    Scope scope = current;
+    while( scope != null) {
+      if (scope.has(symbol)) return true;
+      scope = scope.enclosing;
     }
 
     return false;
   }
 
   Symbol getSymbol(String symbol) {
-    return _symbols[scope][symbol];
+    return current.getSymbol(symbol);
+  }
+
+  Symbol getAt(int depth, String symbol) {
+    return scopes[depth].getSymbol(symbol);
+  }
+
+  Symbol getFrom(int depth, String symbol) {
+    Scope scope = scopes[depth];
+    while (scope != null) {
+      if (scope.has(symbol)) return scope.getSymbol(symbol);
+      scope = scope.enclosing;
+    }
+
+    return null;
   }
 }

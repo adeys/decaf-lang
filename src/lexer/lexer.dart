@@ -223,10 +223,6 @@ class Lexer {
     return isAtEnd() ? '' : source[offset];
   }
 
-  String _peekNext() {
-    return isAtEnd() ? '' : source[offset + 1];
-  }
-
   String _advance() {
     offset++;
     return source[offset - 1];

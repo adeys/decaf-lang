@@ -110,6 +110,7 @@ class BreakStmt implements Stmt {
 class ReturnStmt implements Stmt {
   Token keyword;
   Expr value;
+  Type expectedType;
 
   ReturnStmt(this.keyword, this.value);
 

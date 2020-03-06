@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'src/error/error.dart';
 import 'src/error/error_reporter.dart';
 import 'src/lexer/lexer.dart';
 import 'src/parser/parser.dart';
+import 'src/semantic/analyzer.dart';
 import 'src/semantic/resolver.dart';
 import 'src/symbol/symbol.dart';
 
@@ -22,8 +24,12 @@ Object run(String program) {
     resolver.resolve(ast);
     if (ErrorReporter.hadError) exit(65);
 
+    Analyzer analyzer = new Analyzer(symbols);
+    analyzer.check(ast);
+    if (ErrorReporter.hadError) exit(65);
+
     return ast; 
-  } catch (e) {
+  } on CompilerError catch (e) {
     ErrorReporter.report(e);
     return null;
   }

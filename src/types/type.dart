@@ -1,4 +1,6 @@
-class Type {
+abstract class Type {
+  String name;
+  bool check(Type type);
 }
 
 class BuiltinType extends Type {
@@ -6,10 +8,11 @@ class BuiltinType extends Type {
 
   static BuiltinType INT = new BuiltinType('int');
   static BuiltinType BOOL = new BuiltinType('bool');
-  static BuiltinType VOID = new BuiltinType('void');
+  static BuiltinType VOID = new BuiltinType('null');
   static BuiltinType STRING = new BuiltinType('string');
   static BuiltinType DOUBLE = new BuiltinType('double');
   static BuiltinType NULL = new BuiltinType('null');
+  static BuiltinType ERROR = new BuiltinType('error');
 
   BuiltinType(this.name);
 
@@ -17,8 +20,29 @@ class BuiltinType extends Type {
   String toString() {
     return name;
   }
+
+  @override
+  bool check(Type type) {
+    if (type is BuiltinType) return type.name == 'error' || name == type.name;
+
+    return false;
+  }
 }
 
 class FunctionType extends Type {
+  String name = 'function';
+  Type returnType;
+  List<Type> paramsType;
+
+  FunctionType(this.returnType, this.paramsType);
+
+  @override
+  bool check(Type type) {
+    return false;
+  }
   
+  @override
+  String toString() {
+    return name;
+  }
 }
