@@ -64,6 +64,22 @@ class IndexExpr implements Expr {
   
 }
 
+class AccessExpr implements Expr {
+  @override
+  Type type;
+  Token dot;
+  Expr target;
+  Expr field;
+
+  AccessExpr(this.dot, this.target, this.field);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitAccessExpr(this);
+  }
+
+}
+
 class GroupingExpr implements Expr {
   Expr expression;
 
@@ -159,6 +175,10 @@ class CallExpr implements Expr {
 
 
 abstract class ExprVisitor {
+
+  visitAccessExpr(AccessExpr expr) {
+    return expr.accept(this);
+  }
 
   visitArrayExpr(ArrayExpr expr) {
     return expr.accept(this);

@@ -234,9 +234,10 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitClassStmt(ClassStmt stmt) {
     String name = stmt.name.lexeme;
-    Symbol symbol = new Symbol(name, new CustomType(name));
+    CustomType type = new CustomType(name);
+    Symbol symbol = new Symbol(name, type);
     symbols.setSymbol(name, symbol);
-    symbols.registerType(symbol.type);
+    symbols.registerType(type);
 
     symbols.beginScope(ScopeType.CLASS);
     // Declare all fields in current scope
@@ -258,7 +259,13 @@ class Resolver implements StmtVisitor, ExprVisitor {
       _resolve(method);
     }
 
+    type.scope = symbols.current;
     symbols.endScope();
+  }
+
+  @override
+  visitAccessExpr(AccessExpr expr) {
+    _resolve(expr.target);
   }
 
 }

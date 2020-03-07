@@ -1,3 +1,5 @@
+import '../symbol/scope.dart';
+
 abstract class Type {
   String name;
   bool isCompatible(Type type);
@@ -12,7 +14,7 @@ class BuiltinType extends Type {
   static BuiltinType STRING = new BuiltinType('string');
   static BuiltinType DOUBLE = new BuiltinType('double');
   static BuiltinType NULL = new BuiltinType('null');
-  static BuiltinType ERROR = new BuiltinType('error');
+  static BuiltinType ERROR = new BuiltinType('invalid');
 
   BuiltinType(this.name);
 
@@ -68,6 +70,7 @@ class ArrayType extends Type {
 
 class CustomType extends Type {
   String name;
+  Scope scope;
 
   CustomType(this.name);
 
@@ -87,6 +90,10 @@ class TypeTable {
 
   void addType(Type type) {
     declared.add(type);
+  }
+
+  Type getType(Type type) {
+    return declared.firstWhere((Type current) => current.name == type.name);
   }
 
   bool hasType(Type type) {

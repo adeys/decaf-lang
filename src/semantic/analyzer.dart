@@ -142,18 +142,35 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitCallExpr(CallExpr expr) {
-    VariableExpr callee = expr.callee as VariableExpr;
-    Symbol sym = scopes.getSymbol(callee.name.lexeme);
-    if (sym.type is! FunctionType) {
-      ErrorReporter.report(new TypeError(expr.paren.line, "No declaration for function '${callee.name.lexeme}' found."));
+    Type type;
+    String name = '';
+    String kind = 'Function';
+    
+    if (expr.callee is VariableExpr) {
+      VariableExpr callee = expr.callee as VariableExpr;
+      Symbol sym = scopes.getSymbol(callee.name.lexeme);
+      type = sym.type;
+      name = callee.name.lexeme;
+    } else if (expr.callee is AccessExpr) {
+      kind = 'Method';
+      name = ((expr.callee as AccessExpr).field as VariableExpr).name.lexeme;
+      type = resolveType(expr.callee);
+    } else {
+      type = resolveType(expr.callee);
+      ErrorReporter.report(new TypeError(expr.paren.line, "'$type' is not callable."));
       return BuiltinType.ERROR;
     }
 
-    FunctionType func = sym.type as FunctionType;
+    if (type is! FunctionType) {
+      ErrorReporter.report(new TypeError(expr.paren.line, "No declaration for ${kind.toLowerCase()} '$name' found."));
+      return BuiltinType.ERROR;
+    }
+
+    FunctionType func = type as FunctionType;
 
     if (expr.arguments.length != func.paramsType.length) {
-      ErrorReporter.report(new TypeError(expr.paren.line, "Function ’${callee.name.lexeme}’ expects ${func.paramsType.length} arguments but ${expr.arguments.length} given."));
-      return BuiltinType.ERROR;
+      ErrorReporter.report(new TypeError(expr.paren.line, "${kind} ’$name’ expects ${func.paramsType.length} arguments but ${expr.arguments.length} given."));
+      return expr.type = func.returnType;
     }
 
     int line = expr.paren.line;
@@ -344,5 +361,25 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     }
 
     exitScope();
+  }
+
+  @override
+  visitAccessExpr(AccessExpr expr) {
+    Type type = resolveType(expr.target);
+    if (type is! CustomType) {
+      ErrorReporter.report(new TypeError(expr.dot.line, "$type has no such field '${(expr.field as VariableExpr).name.lexeme}'."));
+      return;
+    }
+
+    CustomType target = types.getType(type);
+    String field = (expr.field as VariableExpr).name.lexeme;
+
+    // Check wether the class has the field
+    if (target.scope.has(field)) {
+      return target.scope.getSymbol(field).type;
+    } else {
+      ErrorReporter.report(new TypeError(expr.dot.line, "$target has no such field '$field'."));
+      return BuiltinType.NULL;
+    }
   }
 }

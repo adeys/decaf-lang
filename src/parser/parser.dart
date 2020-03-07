@@ -29,7 +29,7 @@ class Parser {
     PrefixRule literal = new PrefixRule(Precedence.NONE, _getPrimary);
     PrefixRule unary = new PrefixRule(Precedence.UNARY, _getUnary);
 
-    //InfixRule dot = new InfixRule(Precedence.CALL, null, _getDot);
+    InfixRule dot = new InfixRule(Precedence.CALL, null, _getDot);
     
     InfixRule assign = new InfixRule(Precedence.ASSIGNMENT, null, _getAssignment);
     InfixRule equality = new InfixRule(Precedence.EQUALITY);
@@ -54,7 +54,7 @@ class Parser {
       TokenType.LEFT_BRACKET: new InfixRule(Precedence.CALL, null, _getIndex),
       TokenType.LEFT_PAREN: new InfixRule(Precedence.CALL, _getGroupingExpr, _getCall),
       TokenType.ARRAY: new PrefixRule(Precedence.NONE, _getArrayExpr),
-      //TokenType.DOT: dot,
+      TokenType.DOT: dot,
 
       // Binary
       TokenType.EQUAL: assign,
@@ -354,6 +354,13 @@ class Parser {
     _expect(TokenType.RIGHT_PAREN, "Expect ')' after 'array' expression.");
 
     return new ArrayExpr(keyword, type, size);
+  }
+
+  AccessExpr _getDot(Expr target, int precedence) {
+    Token dot = _previous;
+    Expr field = _parsePrecedence(Precedence.CALL * 2);
+
+    return new AccessExpr(dot, target, field);
   }
 
   AssignExpr _getAssignment(Expr left, int _) {

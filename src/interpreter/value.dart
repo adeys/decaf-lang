@@ -80,6 +80,17 @@ class DecafFunction extends DecafCallable {
   Object value;
 }
 
+class DecafClass {
+  String name;
+  Environment scope;
+
+  DecafClass(this.name, [this.scope]);
+}
+
+class DecafInstance {
+  
+}
+
 class Return {
   Value value;
   Return(this.value);

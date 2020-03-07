@@ -259,7 +259,28 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitClassStmt(ClassStmt stmt) {
-    // TODO: implement visitClassStmt
+    DecafClass klass = new DecafClass(stmt.name.lexeme);
+    _env.define(stmt.name.lexeme, klass);
+
+    _env = new Environment(_env);
+
+    for (VarStmt field in stmt.fields) {
+      _execute(field);
+    }
+
+    for (FunctionStmt method in stmt.methods) {
+      _execute(method);
+    }
+
+    klass.scope = _env;
+    
+    _env = _env.parent;
+    _env.assign(stmt.name, klass);
+  }
+
+  @override
+  visitAccessExpr(AccessExpr expr) {
+    // TODO: implement visitAccessExpr
     return null;
   }
   
