@@ -1,6 +1,6 @@
 abstract class Type {
   String name;
-  bool check(Type type);
+  bool isCompatible(Type type);
 }
 
 class BuiltinType extends Type {
@@ -22,7 +22,7 @@ class BuiltinType extends Type {
   }
 
   @override
-  bool check(Type type) {
+  bool isCompatible(Type type) {
     if (type is BuiltinType) return type.name == 'error' || name == type.name;
 
     return false;
@@ -37,7 +37,7 @@ class FunctionType extends Type {
   FunctionType(this.returnType, this.paramsType);
 
   @override
-  bool check(Type type) {
+  bool isCompatible(Type type) {
     return false;
   }
   
@@ -56,7 +56,7 @@ class ArrayType extends Type {
   }
 
   @override
-  bool check(Type type) {
+  bool isCompatible(Type type) {
     return (type is ArrayType) && type.name == name;
   }
   
