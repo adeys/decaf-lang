@@ -6,7 +6,11 @@ abstract class Stmt {
   Object accept(StmtVisitor visitor);
 }
 
-class VarStmt implements Stmt {
+abstract class DeclStmt {
+  Token name;
+}
+
+class VarStmt implements Stmt, DeclStmt {
   Type type;
   Token name;
   Expr initializer;
@@ -120,7 +124,7 @@ class ReturnStmt implements Stmt {
   }
 }
 
-class FunctionStmt implements Stmt {
+class FunctionStmt implements Stmt, DeclStmt {
   Token name;
   Type returnType;
   List<VarStmt> params;
@@ -134,12 +138,29 @@ class FunctionStmt implements Stmt {
   }
 }
 
+class ClassStmt implements Stmt, DeclStmt {
+  Token name;
+  List<VarStmt> fields;
+  List<FunctionStmt> methods;
+
+  ClassStmt(this.name, this.fields, this.methods);
+  
+  @override
+  void accept(StmtVisitor visitor) {
+    visitor.visitClassStmt(this);
+  }
+
+}
 
 abstract class StmtVisitor {
 
 	visitBlockStmt(BlockStmt stmt) {
 		return stmt.accept(this);
 	}
+
+  visitClassStmt(ClassStmt stmt) {
+    return stmt.accept(this);
+  }
 
 	visitExpressionStmt(ExpressionStmt stmt) {
 		return stmt.accept(this);

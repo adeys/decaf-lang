@@ -65,8 +65,7 @@ void runFile(String filename) {
     exit(60);
   }
 
-  var result = run(file.readAsStringSync());
-  print(result);
+  run(file.readAsStringSync());
 }
 
 void main(List<String> args) {

@@ -46,11 +46,8 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
   void declare(Stmt stmt) {
     Token name;
-    if (stmt is VarStmt) {
-      name = stmt.name;
-    } else if (stmt is FunctionStmt) {
-      name = stmt.name;
-    }
+    
+    name = (stmt as DeclStmt).name;
 
     if (symbols.inScope(name.lexeme)) {
       ErrorReporter.report(new SemanticError(name, "Name '${name.lexeme}' has already been declared in this scope."));
@@ -232,6 +229,12 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitIndexExpr(IndexExpr expr) {
     _resolve(expr.owner);
     _resolve(expr.index);
+  }
+
+  @override
+  visitClassStmt(ClassStmt stmt) {
+    // TODO: implement visitClassStmt
+    return null;
   }
 
 }

@@ -238,7 +238,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     Type returnType = stmt.value != null ? resolveType(stmt.value) : BuiltinType.VOID;
 
     if (BuiltinType.VOID.isCompatible(stmt.expectedType) && returnType.name != BuiltinType.VOID.name) {
-      ErrorReporter.report(new TypeError(stmt.keyword.line, "Cannot return a non null value from a void-return function."));
+      ErrorReporter.report(new TypeError(stmt.keyword.line, "Incompatible return: $returnType given, void expected."));
       return;
     }
     
@@ -312,5 +312,11 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     }
 
     return type.name == BuiltinType.ERROR.name ? type : (type as ArrayType).base;
+  }
+
+  @override
+  visitClassStmt(ClassStmt stmt) {
+    // TODO: implement visitClassStmt
+    return null;
   }
 }

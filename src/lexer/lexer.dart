@@ -20,11 +20,11 @@ class Lexer {
     "true": TokenType.TRUE,
     "false": TokenType.FALSE,
     "class": TokenType.CLASS,
-    "interface": TokenType.INTERFACE,
+    //"interface": TokenType.INTERFACE,
     "null": TokenType.NULL,
     "this": TokenType.THIS,
-    "extends": TokenType.EXTENDS,
-    "implements": TokenType.IMPLEMENTS,
+    //"extends": TokenType.EXTENDS,
+    //"implements": TokenType.IMPLEMENTS,
     "for": TokenType.FOR,
     "while": TokenType.WHILE,
     "if": TokenType.IF,
@@ -34,8 +34,8 @@ class Lexer {
     "new": TokenType.NEW,
     "array": TokenType.ARRAY,
     "print": TokenType.PRINT,
-    "readInt": TokenType.RD_INT,
-    "readLine": TokenType.RD_LINE,
+    //"readInt": TokenType.RD_INT,
+    //"readLine": TokenType.RD_LINE,
   };
 
   Lexer(this.source);

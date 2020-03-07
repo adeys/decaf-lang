@@ -89,22 +89,43 @@ class Parser {
 
   Stmt _getDeclaration() {
     try {
-      int index = offset;
-      Type type = _match([TokenType.KW_VOID]) ? BuiltinType.VOID : _expectType();
-      Token name = _expect(TokenType.IDENTIFIER, 'Expect variable name after type.');
-      
-      if (type.name == BuiltinType.VOID.name || _check(TokenType.LEFT_PAREN)) {
-        _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");
-        return _getFuncDeclaration(type, name);
-      }
+      if (_match([TokenType.CLASS])) return _getClassDeclaration();
 
-      offset = index;
-      return _getVarDeclaration();
+      return _getFieldDeclaration();
     } on ParseError catch (e) {
       ErrorReporter.report(e);
       _synchronize();
       return null;
     }
+  }
+
+  Stmt _getFieldDeclaration() {
+    int index = offset;
+    Type type = _match([TokenType.KW_VOID]) ? BuiltinType.VOID : _expectType();
+    Token name = _expect(TokenType.IDENTIFIER, 'Expect variable name after type.');
+    
+    if (type.name == BuiltinType.VOID.name || _check(TokenType.LEFT_PAREN)) {
+      _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");
+      return _getFuncDeclaration(type, name);
+    }
+
+    offset = index;
+    return _getVarDeclaration();
+  }
+
+  ClassStmt _getClassDeclaration() {
+    Token name = _expect(TokenType.IDENTIFIER, "Expect class name.");
+
+    List<VarStmt> fields = [];
+    List<FunctionStmt> methods = [];
+    _expect(TokenType.LEFT_BRACE, "Expect '{' before class declaration body.");
+    while (!_check(TokenType.RIGHT_BRACE)) {
+      Stmt field = _getFieldDeclaration();
+      (field is VarStmt ? fields : methods).add(field);
+    }
+    _expect(TokenType.RIGHT_BRACE, "Expect '}' at class declaration end.");
+
+    return new ClassStmt(name, fields, methods);
   }
 
   VarStmt _getVariable() {

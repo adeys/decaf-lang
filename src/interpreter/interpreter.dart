@@ -256,5 +256,11 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     
     return owner.get(index); 
   }
+
+  @override
+  visitClassStmt(ClassStmt stmt) {
+    // TODO: implement visitClassStmt
+    return null;
+  }
   
 }
