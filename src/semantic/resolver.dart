@@ -87,7 +87,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitBreakStmt(BreakStmt stmt) {
     if (loop != LoopScope.LOOP) {
-      ErrorReporter.report(new SemanticError(stmt.keyword, "Cannot use 'break' outside from a loop scope."));
+      ErrorReporter.report(new SemanticError(stmt.keyword, "break is only allowed inside a loop."));
     }
   }
 
@@ -221,6 +221,17 @@ class Resolver implements StmtVisitor, ExprVisitor {
     _resolve(stmt.body);
 
     loop = enclosing;
+  }
+
+  @override
+  visitArrayExpr(ArrayExpr expr) {
+    _resolve(expr.size);
+  }
+
+  @override
+  visitIndexExpr(IndexExpr expr) {
+    _resolve(expr.owner);
+    _resolve(expr.index);
   }
 
 }

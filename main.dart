@@ -18,6 +18,8 @@ Object run(String program) {
     Lexer lexer = new Lexer(program);
 
     var tokens = lexer.tokenize();
+    if (ErrorReporter.hadError) exit(65);
+    
     Parser parser = new Parser(tokens);
 
     var ast = parser.parse();

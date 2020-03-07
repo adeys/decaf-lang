@@ -19,6 +19,7 @@ enum TokenType {
   NULL, PRINT, RD_LINE, RD_INT, NEW, ARRAY,
 
   WHITESPACE,
+  INVALID,
 	EOF
 }
 

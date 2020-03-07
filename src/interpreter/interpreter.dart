@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../ast/expression.dart';
 import '../ast/statement.dart';
 import '../error/error.dart';
@@ -45,8 +47,28 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   @override
   visitAssignExpr(AssignExpr expr) {
     Value value = _evaluate(expr.value);
+    
+    if (expr.target is VariableExpr) {
+      _env.assign((expr.target as VariableExpr).name, value);
+    } else if (expr.target is IndexExpr) {
+      IndexExpr target = expr.target as IndexExpr;
+      Value result = _evaluate(target.owner);
 
-    _env.assign((expr.target as VariableExpr).name, value);
+      if (result is! ArrayValue) {
+        throw new RuntimeError(target.bracket, "[] can only be applied to arrays.");
+      }
+
+      ArrayValue array = result as ArrayValue;
+
+      int index = _evaluate(target.index).value as int;
+
+      if (index < 0 || index >= array.size) {
+        throw new RuntimeError(expr.op, "Array index out of bounds.");
+      }
+      
+      array.set(index, value);
+    }
+
   }
 
   @override
@@ -62,11 +84,11 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       case '*': value = (left as num) * (right as num); break;
       case '%': {
         if ((right as num) == 0) throw new DivisionByZeroError(expr.op);
-        value = (left as num) % (right as num); break;
+        value = ((left as num) % (right as num)).toInt(); break;
       }
       case '/': {
         if ((right as num) == 0) throw new DivisionByZeroError(expr.op);
-        value = (left as num) / (right as num); break;
+        value = ((left as num) / (right as num)).toDouble(); break;
       }
       case '<': value = (left as num) < (right as num); break;
       case '<=': value = (left as num) <= (right as num); break;
@@ -166,10 +188,11 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   visitPrintStmt(PrintStmt stmt) {
     StringBuffer buffer = new StringBuffer();
     for (Expr expr in stmt.expressions) {
-      buffer.write(_evaluate(expr).toString());
+      Value value = _evaluate(expr);
+      buffer.write(value.toString());
     }
 
-    print(buffer.toString());
+    stdout.write(buffer.toString());
   }
 
   @override
@@ -209,6 +232,29 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     while (_evaluate(stmt.condition).value == true) {
       _execute(stmt.body);
     }
+  }
+
+  @override
+  visitArrayExpr(ArrayExpr expr) {
+    int size = _evaluate(expr.size).value as int;
+
+    if (size < 0) {
+      throw new RuntimeError(expr.keyword, "Array size must be >= 0.");
+    }
+
+    return new ArrayValue(expr.type, size);
+  }
+
+  @override
+  visitIndexExpr(IndexExpr expr) {
+    ArrayValue owner = _evaluate(expr.owner);
+    int index = _evaluate(expr.index).value as int;
+
+    if (index < 0 || index >= owner.size) {
+      throw new RuntimeError(expr.bracket, "Array index out of bounds.");
+    }
+    
+    return owner.get(index); 
   }
   
 }

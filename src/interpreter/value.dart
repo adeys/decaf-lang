@@ -12,13 +12,36 @@ class Value {
   @override
   String toString() {
     return (type.name == BuiltinType.INT.name) 
-      ? (value as num).toInt().toString()
+      ? (value as num)?.toInt().toString()
       : value.toString();
   }
 }
 
 class NullValue extends Value {
   NullValue() : super(BuiltinType.NULL, null);
+}
+
+class ArrayValue extends Value {
+  List<Value> values = [];
+  int size;
+  ArrayValue(Type type, this.size) : super(type) {
+    values = new List<Value>(size);
+    values.fillRange(0, size - 1, new Value(type));
+  }
+
+  void set(int index, Value value) {
+    value.type = type;
+    values[index] = value;
+  }
+
+  Value get(int index) {
+    return values[index];
+  }
+
+  @override
+  String toString() {
+    return '$type[$size]';
+  }
 }
 
 abstract class DecafCallable implements Value {

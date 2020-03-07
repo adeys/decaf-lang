@@ -39,43 +39,48 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   }
 
   void checkCompatible(Type expected, Type current, int line) {
-    if (!expected.check(current)) {
+    if (!expected.isCompatible(current)) {
       ErrorReporter.report(new TypeError(line, "Expected expression of type '$expected', Got '$current'."));
     }
   }
 
   void checkAssignment(Type target, Type value, line) {
-    if (!target.check(value)) {
+    if (!target.isCompatible(value)) {
         ErrorReporter.report(new TypeError(line, "Cannot assign expression of type '${value}' to variable of type '${target}'."));
       }
   }
 
   @override
   visitAssignExpr(AssignExpr expr) {
-    Symbol target = scopes.getSymbol((expr.target as VariableExpr).name.lexeme);
-    checkAssignment(target.type, resolveType(expr.value), expr.op.line);
+    if (expr.target is VariableExpr) {
+      Symbol target = scopes.getSymbol((expr.target as VariableExpr).name.lexeme);
+      checkAssignment(target.type, resolveType(expr.value), expr.op.line);
+    } else if (expr.target is IndexExpr) {
+      IndexExpr target = expr.target as IndexExpr;
+      checkAssignment(resolveType(target.owner), resolveType(expr.value), expr.op.line);
+    }
+  }
+
+  bool _isNum(Type type) {
+    return type.name == BuiltinType.INT.name || type.name == BuiltinType.DOUBLE.name;
   }
 
   Type checkBinary(BinaryExpr expr) {
-    BuiltinType left = resolveType(expr.left) as BuiltinType;
-    BuiltinType right = resolveType(expr.right) as BuiltinType;
-    Type ret;
-    if (left.name != BuiltinType.INT.name && left.name != BuiltinType.DOUBLE.name) {
-      ErrorReporter.report(new TypeError(expr.op.line, "Left operand to '${expr.op.lexeme}' must be either of type int or double."));
+    Type left = resolveType(expr.left);
+    Type right = resolveType(expr.right);
+    
+    if (left is! BuiltinType || right is! BuiltinType) {
+      ErrorReporter.report(new TypeError(expr.op.line, "Incompatible operands: $left ${expr.op.lexeme} $right."));
+      return BuiltinType.ERROR;
+    }
+
+    Type ret = left;
+    if (!_isNum(left) || _isNum(right) || !left.isCompatible(right)) {
+      ErrorReporter.report(new TypeError(expr.op.line, "Incompatible operands: $left ${expr.op.lexeme} $right."));
       ret = BuiltinType.ERROR;
     }
 
-    if (right.name != BuiltinType.INT.name && right.name != BuiltinType.DOUBLE.name) {
-      ErrorReporter.report(new TypeError(expr.op.line, "Right operand to '${expr.op.lexeme}' must be either of type int or double."));
-      ret = BuiltinType.ERROR;
-    }
-
-    if (left.name != right.name) {
-      ErrorReporter.report(new TypeError(expr.op.line, "Operands to '${expr.op.lexeme}' must be both of type either int or double."));
-      ret = BuiltinType.ERROR;
-    }
-
-    return ret ?? left;
+    return ret ;
   }
 
   @override
@@ -98,7 +103,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       case '!=':
         Type left = resolveType(expr.left);
         Type right = resolveType(expr.left);
-        if (!left.check(right)) {
+        if (!left.isCompatible(right)) {
           ErrorReporter.report(new TypeError(expr.op.line, "Operands to '${expr.op.lexeme}' must be of same type. Got('$left' and '$right')."));
           return expr.type = BuiltinType.ERROR;
         }
@@ -127,22 +132,22 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     VariableExpr callee = expr.callee as VariableExpr;
     Symbol sym = scopes.getSymbol(callee.name.lexeme);
     if (sym.type is! FunctionType) {
-      ErrorReporter.report(new TypeError(expr.paren.line, "Identifier '${callee.name.lexeme}' is not a function."));
+      ErrorReporter.report(new TypeError(expr.paren.line, "No declaration for function '${callee.name.lexeme}' found."));
       return BuiltinType.ERROR;
     }
 
     FunctionType func = sym.type as FunctionType;
 
     if (expr.arguments.length != func.paramsType.length) {
-      ErrorReporter.report(new TypeError(expr.paren.line, "Invalid arguments number to function '${callee.name.lexeme}'. Expected ${func.paramsType.length} but got ${expr.arguments.length}."));
+      ErrorReporter.report(new TypeError(expr.paren.line, "Function ’${callee.name.lexeme}’ expects ${func.paramsType.length} arguments but ${expr.arguments.length} given."));
       return BuiltinType.ERROR;
     }
 
     int line = expr.paren.line;
     for (int i = 0; i < func.paramsType.length; i++) {
       Type param = resolveType(expr.arguments[i]);
-      if(!func.paramsType[i].check(param)) {
-        ErrorReporter.report(new TypeError(line, "Argument ${i + 1} to function '${callee.name.lexeme}' must be of type '${func.paramsType[i]}'. Provided '$param'."));
+      if(!func.paramsType[i].isCompatible(param)) {
+        ErrorReporter.report(new TypeError(line, "Incompatible argument ${i + 1}: $param given, ${func.paramsType[i]} expected."));
       }
     }
 
@@ -188,7 +193,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitIfStmt(IfStmt stmt) {
-    if (!BuiltinType.BOOL.check(resolveType(stmt.condition))) {
+    if (!BuiltinType.BOOL.isCompatible(resolveType(stmt.condition))) {
       ErrorReporter.report(new TypeError(stmt.keyword.line, "Conditional expression of 'if' must be of type bool."));
     }
 
@@ -205,11 +210,11 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   visitLogicalExpr(LogicalExpr expr) {
     int line = expr.op.line;
     
-    if (!BuiltinType.BOOL.check(resolveType(expr.left))) {
+    if (!BuiltinType.BOOL.isCompatible(resolveType(expr.left))) {
       ErrorReporter.report(new TypeError(line, "Left operand to '${expr.op.lexeme}' must be of type bool."));
     }
     
-    if (!BuiltinType.BOOL.check(resolveType(expr.right))) {
+    if (!BuiltinType.BOOL.isCompatible(resolveType(expr.right))) {
       ErrorReporter.report(new TypeError(line, "Right operand to '${expr.op.lexeme}' must be of type bool."));
     }
 
@@ -223,7 +228,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     for (int i = 0; i < stmt.expressions.length; i++) {
       Type type = resolveType(stmt.expressions[i]);
       if (!allowed.contains(type.name)) {
-        ErrorReporter.report(new TypeError(stmt.keyword.line, "Parameter $i to print does not have a valid type (int, bool, string)."));
+        ErrorReporter.report(new TypeError(stmt.keyword.line, "Incompatible argument ${i + 1}: $type given, int/bool/string expected."));
       }
     }
   }
@@ -232,13 +237,13 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   visitReturnStmt(ReturnStmt stmt) {
     Type returnType = stmt.value != null ? resolveType(stmt.value) : BuiltinType.VOID;
 
-    if (BuiltinType.VOID.check(stmt.expectedType) && returnType.name != BuiltinType.VOID.name) {
+    if (BuiltinType.VOID.isCompatible(stmt.expectedType) && returnType.name != BuiltinType.VOID.name) {
       ErrorReporter.report(new TypeError(stmt.keyword.line, "Cannot return a non null value from a void-return function."));
       return;
     }
     
-    if (!stmt.expectedType.check(returnType)) {
-      ErrorReporter.report(new TypeError(stmt.keyword.line, "Invaid return value type from function. Expected '${stmt.expectedType}', Got '$returnType'."));
+    if (!stmt.expectedType.isCompatible(returnType)) {
+      ErrorReporter.report(new TypeError(stmt.keyword.line, "Incompatible return: $returnType given, ${stmt.expectedType} expected."));
       return;
     }
   }
@@ -247,11 +252,14 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   visitUnaryExpr(UnaryExpr expr) {
     Type type = resolveType(expr.expression);
     if (expr.op.lexeme == '!') {
-      checkCompatible(BuiltinType.BOOL, type, expr.op.line);
+      if (!BuiltinType.BOOL.isCompatible(type)) {
+        ErrorReporter.report(new TypeError(expr.op.line, "Incompatible operand: ! $type."));
+      }
+      
       return expr.type = BuiltinType.BOOL;
     } else {
       String name = (type as BuiltinType).name;
-      if (name != 'int' && name != 'double') {
+      if (name != BuiltinType.INT.name && name != BuiltinType.DOUBLE.name) {
         ErrorReporter.report(new TypeError(expr.op.line, "Operands to unary '-' must be either of type 'int'or 'double'."));
       }
 
@@ -278,5 +286,31 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   visitWhileStmt(WhileStmt stmt) {
     checkCompatible(BuiltinType.BOOL, resolveType(stmt.condition), stmt.keyword.line);
     resolve(stmt.body);
+  }
+
+  @override
+  visitArrayExpr(ArrayExpr expr) {
+    Type type = resolveType(expr.size);
+    if (!BuiltinType.INT.isCompatible(type)) {
+      ErrorReporter.report(new TypeError(expr.keyword.line, "Size for array must be an integer."));
+    }
+
+    return expr.type = new ArrayType(expr.type);
+  }
+
+  @override
+  visitIndexExpr(IndexExpr expr) {
+    Type type = resolveType(expr.owner);
+    if (type is! ArrayType) {
+      ErrorReporter.report(new TypeError(expr.bracket.line, "[] can only be applied to arrays."));
+      type = BuiltinType.ERROR;
+    }
+
+    if (!BuiltinType.INT.isCompatible(resolveType(expr.index))) {
+      ErrorReporter.report(new TypeError(expr.bracket.line, "Array subscript must be an integer."));
+      type = BuiltinType.ERROR;
+    }
+
+    return type.name == BuiltinType.ERROR.name ? type : (type as ArrayType).base;
   }
 }

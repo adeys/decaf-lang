@@ -1,4 +1,5 @@
 import '../error/error.dart';
+import '../error/error_reporter.dart';
 import 'tokens.dart';
 
 class Lexer {
@@ -8,7 +9,7 @@ class Lexer {
   int start = 0;
   List<Token> tokens = [];
   
-  //List<String> _escapers = ['n', 't', 'b', 'r', '\\', '"'];
+  List<String> _escapers = ['n', 't', 'b', 'r', '\\', '"'];
   
   Map<String, TokenType> _keywords = {
     "int": TokenType.KW_INT,
@@ -43,7 +44,7 @@ class Lexer {
     while (!isAtEnd()) {
       start = offset;
       Token token = getToken();
-      if (token.type != TokenType.WHITESPACE) tokens.add(token);
+      if (token.type != TokenType.WHITESPACE && token.type != TokenType.INVALID) tokens.add(token);
     }
 
     tokens.add(new Token(TokenType.EOF, 'EOF', null, line));
@@ -58,6 +59,8 @@ class Lexer {
       case ')': return _makeToken(TokenType.RIGHT_PAREN, char);
       case '{': return _makeToken(TokenType.LEFT_BRACE, char);
       case '}': return _makeToken(TokenType.RIGHT_BRACE, char);
+      case '[': return _makeToken(TokenType.LEFT_BRACKET, char);
+      case ']': return _makeToken(TokenType.RIGHT_BRACKET, char);
       case ',': return _makeToken(TokenType.COMMA, char);
       case '.': return _makeToken(TokenType.DOT, char);
       case ';': return _makeToken(TokenType.SEMICOLON, char);
@@ -118,7 +121,8 @@ class Lexer {
       }
     }
 
-    throw new SyntaxError(line, "Unknown token '$char'.");
+    ErrorReporter.report(new SyntaxError(line, "Unknown token '$char'."));
+    return _makeToken(TokenType.INVALID, char);
   }
 
   void _matchMultilineComment() {
@@ -191,17 +195,30 @@ class Lexer {
   }
 
   Token _getString() {
-    String string = "";
+    StringBuffer string = new StringBuffer();
     while (_peek() != '\n' && _peek() != '"' && !isAtEnd()) {
-      string += _peek();
-      _advance();
+      if (_peek() == '\\' && _escapers.contains(_peekNext())) {
+        _advance();
+        String char;
+        switch (_advance()) {
+          case 'n': char = '\n'; break;
+          case 't': char = '\t'; break;
+          case 'b': char = '\b'; break;
+          case 'r': char = '\r'; break;
+          case '\\': char = '\\'; break;
+          case '"': char = '"'; break;
+        }
+        string.write(char);
+      } else {
+        string.write(_advance());
+      }
     }
 
     if (isAtEnd() || _peek() == '\n') throw new SyntaxError(line, 'Unterminated string.');
     // Consume '"'
     _advance();
 
-    return _makeToken(TokenType.STRING, string);
+    return _makeToken(TokenType.STRING, string.toString());
   }
 
   Token _makeToken(TokenType type, Object value) {
@@ -221,6 +238,10 @@ class Lexer {
 
   String _peek() {
     return isAtEnd() ? '' : source[offset];
+  }
+
+  String _peekNext() {
+    return isAtEnd() ? '' : source[offset + 1];
   }
 
   String _advance() {
