@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../ast/expression.dart';
 import '../ast/statement.dart';
 import '../error/error.dart';
@@ -169,7 +171,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       buffer.write(_evaluate(expr).toString());
     }
 
-    print(buffer.toString());
+    stdout.write(buffer.toString());
   }
 
   @override
