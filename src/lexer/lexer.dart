@@ -1,4 +1,5 @@
 import '../error/error.dart';
+import '../error/error_reporter.dart';
 import 'tokens.dart';
 
 class Lexer {
@@ -43,7 +44,7 @@ class Lexer {
     while (!isAtEnd()) {
       start = offset;
       Token token = getToken();
-      if (token.type != TokenType.WHITESPACE) tokens.add(token);
+      if (token.type != TokenType.WHITESPACE && token.type != TokenType.INVALID) tokens.add(token);
     }
 
     tokens.add(new Token(TokenType.EOF, 'EOF', null, line));
@@ -118,7 +119,8 @@ class Lexer {
       }
     }
 
-    throw new SyntaxError(line, "Unknown token '$char'.");
+    ErrorReporter.report(new SyntaxError(line, "Unknown token '$char'."));
+    return _makeToken(TokenType.INVALID, char);
   }
 
   void _matchMultilineComment() {
