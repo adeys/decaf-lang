@@ -65,3 +65,19 @@ class ArrayType extends Type {
     return name;
   }
 }
+
+class CustomType extends Type {
+  String name;
+
+  CustomType(this.name);
+
+  @override
+  bool isCompatible(Type type) {
+    return type is CustomType && type.name == name;
+  }
+  
+  @override
+  String toString() {
+    return name;
+  }
+}

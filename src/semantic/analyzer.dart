@@ -75,7 +75,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     }
 
     Type ret = left;
-    if (!_isNum(left) || _isNum(right) || !left.isCompatible(right)) {
+    if (!_isNum(left) || !_isNum(right) || !left.isCompatible(right)) {
       ErrorReporter.report(new TypeError(expr.op.line, "Incompatible operands: $left ${expr.op.lexeme} $right."));
       ret = BuiltinType.ERROR;
     }
@@ -316,7 +316,16 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitClassStmt(ClassStmt stmt) {
-    // TODO: implement visitClassStmt
-    return null;
+    enterScope();
+    
+    for (VarStmt field in stmt.fields) {
+      resolve(field);
+    }
+
+    for (FunctionStmt method in stmt.methods) {
+      resolve(method);
+    }
+
+    exitScope();
   }
 }
