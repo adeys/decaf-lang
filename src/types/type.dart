@@ -76,7 +76,7 @@ class CustomType extends Type {
 
   @override
   bool isCompatible(Type type) {
-    return type is CustomType && type.name == name;
+    return (type == BuiltinType.NULL) || (type is CustomType && type.name == name);
   }
   
   @override

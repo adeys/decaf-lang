@@ -350,7 +350,7 @@ class Parser {
     _expect(TokenType.LEFT_PAREN, "Expect '(' after 'array'.");
     Expr size = _getExpression();
     _expect(TokenType.COMMA, "Expect ',' after array size.");
-    Type type = _expectType();
+    Type type = _expectType(false);
     _expect(TokenType.RIGHT_PAREN, "Expect ')' after 'array' expression.");
 
     return new ArrayExpr(keyword, type, size);
@@ -462,10 +462,24 @@ class Parser {
     return false;
   }
 
-  bool _matchType() {
+  bool _matchType([bool declare = true]) {
     // Match cases: `Class name` and `Class[]` 
-    if (_check(TokenType.IDENTIFIER) && (_checkNext(TokenType.IDENTIFIER) || _checkNext(TokenType.LEFT_BRACKET))) {
-      return true;
+    if (_check(TokenType.IDENTIFIER)) {
+      // Trick to match a single identifier as a type name
+      if (!declare) return true;
+      
+      if (_checkNext(TokenType.IDENTIFIER)) {
+        return true;
+      } else if (_checkNext(TokenType.LEFT_BRACKET)) {
+        _advance();
+        if (_checkNext(TokenType.RIGHT_BRACKET)) {
+          offset--;
+          return true;
+        }
+        offset--;
+        return false;
+      }
+      return false;
     }
 
     if (_match(_types)) {
@@ -490,8 +504,8 @@ class Parser {
     throw new ParseError(_peek(), errMsg);
   }
 
-  Type _expectType() {
-    if (!_matchType()) {
+  Type _expectType([bool declare = true]) {
+    if (!_matchType(declare)) {
       throw new ParseError(_peek(), 'Expected type expression.');
     }
 

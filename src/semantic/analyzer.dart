@@ -70,7 +70,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       checkAssignment(target.type, resolveType(expr.value), expr.op.line);
     } else if (expr.target is IndexExpr) {
       IndexExpr target = expr.target as IndexExpr;
-      checkAssignment(resolveType(target.owner), resolveType(expr.value), expr.op.line);
+      checkAssignment((resolveType(target.owner) as ArrayType).base, resolveType(expr.value), expr.op.line);
     }
   }
 
