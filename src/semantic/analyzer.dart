@@ -4,15 +4,16 @@ import '../error/error.dart';
 import '../error/error_reporter.dart';
 import '../symbol/symbol.dart';
 import '../types/type.dart';
+import 'scope_owner.dart';
 
 class Analyzer implements StmtVisitor, ExprVisitor {
-  SymbolTable symbols;
-  int scope = 0;
+  ScopeOwner scopes;
 
-  Analyzer(this.symbols) {
-    for (int i = 0; i < this.symbols.scopes.length; i++) {
-      print( "$i -> ${symbols.scopes[i].symbols.keys} -> ${symbols.scopes[i].enclosing?.symbols?.keys}");
-    }
+  Analyzer(SymbolTable table) {
+    scopes = new ScopeOwner(table);
+    /*for (int i = 0; i < table.scopes.length; i++) {
+      print( "$i -> ${table.scopes[i]} -> ${table.scopes[i].enclosing}");
+    }*/
   }
 
   void check(List<Stmt> ast) {
@@ -30,12 +31,11 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   }
 
   void enterScope() {
-    //print(symbols.scopes[scope].symbols.keys.toString() + ' -> ' + scope.toString());
-    scope++;
+    scopes.beginScope();
   }
 
   void exitScope() {
-    scope--;
+    scopes.endScope();
   }
 
   void checkCompatible(Type expected, Type current, int line) {
@@ -52,7 +52,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitAssignExpr(AssignExpr expr) {
-    Symbol target = symbols.getFrom(scope, (expr.target as VariableExpr).name.lexeme);
+    Symbol target = scopes.getSymbol((expr.target as VariableExpr).name.lexeme);
     checkAssignment(target.type, resolveType(expr.value), expr.op.line);
   }
 
@@ -110,7 +110,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitBlockStmt(BlockStmt stmt) {
-    enterScope();print('In block -> $scope');
+    enterScope();
     for (Stmt stmt in stmt.statements) {
       resolve(stmt);
     }
@@ -125,7 +125,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   @override
   visitCallExpr(CallExpr expr) {
     VariableExpr callee = expr.callee as VariableExpr;
-    Symbol sym = symbols.getFrom(scope, callee.name.lexeme);
+    Symbol sym = scopes.getSymbol(callee.name.lexeme);
     if (sym.type is! FunctionType) {
       ErrorReporter.report(new TypeError(expr.paren.line, "Identifier '${callee.name.lexeme}' is not a function."));
       return BuiltinType.ERROR;
@@ -165,9 +165,9 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitFunctionStmt(FunctionStmt stmt) {
-    Symbol symbol = symbols.getFrom(scope, stmt.name.lexeme);
+    Symbol symbol = scopes.fromCurrent(stmt.name.lexeme);
 
-    enterScope();print('In function -> $scope');
+    enterScope();
 
     List<Type> params = [];
     for (VarStmt param in stmt.params) {
@@ -175,7 +175,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       params.add(param.type);
     }
 
-    symbol.type = new FunctionType(stmt.returnType, params);
+    (symbol.type as FunctionType).paramsType = params;
 
     resolve(stmt.body);
     exitScope();
@@ -261,9 +261,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitVarStmt(VarStmt stmt) {
-    Symbol symbol = symbols.getAt(scope, stmt.name.lexeme);
-    //print(stmt.name.lexeme);print(scope);
-    symbol.type = stmt.type;
+    Symbol symbol = scopes.fromCurrent(stmt.name.lexeme);
 
     if (stmt.initializer != null) {
       Type type = resolveType(stmt.initializer);
@@ -273,7 +271,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitVariableExpr(VariableExpr expr) {
-    return symbols.getFrom(scope, expr.name.lexeme).type;
+    return scopes.getSymbol(expr.name.lexeme).type;
   }
 
   @override

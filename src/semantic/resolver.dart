@@ -2,9 +2,12 @@ import '../ast/expression.dart';
 import '../ast/statement.dart';
 import '../error/error.dart';
 import '../error/error_reporter.dart';
+import '../lexer/tokens.dart';
+import '../symbol/scope.dart';
 import '../symbol/symbol.dart';
+import '../types/type.dart';
 
-enum Scope {
+enum ScopeKind {
   GLOBAL,
   FUNCTION,
 }
@@ -16,7 +19,7 @@ enum LoopScope {
 
 class Resolver implements StmtVisitor, ExprVisitor {
   SymbolTable symbols;
-  Scope scope = Scope.GLOBAL;
+  ScopeKind scope = ScopeKind.GLOBAL;
   FunctionStmt currentFunc;
   LoopScope loop = LoopScope.NONE;
   List<int> scopes = [];
@@ -26,13 +29,34 @@ class Resolver implements StmtVisitor, ExprVisitor {
   }
   
   SymbolTable resolve(List<Stmt> ast) {
-    symbols.beginScope();
+    symbols.beginScope(ScopeType.GLOBAL);
+
+    for (Stmt stmt in ast) {
+      declare(stmt);
+    }
+
     for (Stmt stmt in ast) {
       _resolve(stmt);
     }
+    
     symbols.endScope();
 
     return symbols;
+  }
+
+  void declare(Stmt stmt) {
+    Token name;
+    if (stmt is VarStmt) {
+      name = stmt.name;
+    } else if (stmt is FunctionStmt) {
+      name = stmt.name;
+    }
+
+    if (symbols.inScope(name.lexeme)) {
+      ErrorReporter.report(new SemanticError(name, "Name '${name.lexeme}' has already been declared in this scope."));
+    }
+    
+    symbols.addSymbol(new Symbol(name.lexeme));
   }
 
   void _resolve(dynamic node) {
@@ -53,7 +77,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
   @override
   visitBlockStmt(BlockStmt block) {
-    symbols.beginScope();
+    symbols.beginScope(ScopeType.BLOCK);
     for (Stmt stmt in block.statements) {
       _resolve(stmt);
     }
@@ -97,19 +121,16 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitFunctionStmt(FunctionStmt stmt) {
     String name = stmt.name.lexeme;
 
-    if (symbols.inScope(name)) {
-      ErrorReporter.report(new SemanticError(stmt.name, "Name '$name' has already been declared in this scope."));
-    }
-
     // Declare function
     Symbol symbol = new Symbol(name);
-    symbols.addSymbol(symbol);
+    symbol.type = new FunctionType(stmt.returnType, stmt.params.map((VarStmt v) => v.type).toList());
+    symbols.setSymbol(name, symbol);
 
-    Scope enclosing = scope;
-    scope = Scope.FUNCTION;
+    ScopeKind enclosing = scope;
+    scope = ScopeKind.FUNCTION;
     currentFunc = stmt;
 
-    symbols.beginScope();
+    symbols.beginScope(ScopeType.FORMALS);
     for (VarStmt param in stmt.params) {
       _resolve(param);
     }
@@ -155,7 +176,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
   @override
   visitReturnStmt(ReturnStmt stmt) {
-    if (scope != Scope.FUNCTION) {
+    if (scope != ScopeKind.FUNCTION) {
       ErrorReporter.report(new SemanticError(stmt.keyword, "Cannot return from a non-function scope."));
     } else {
       stmt.expectedType = currentFunc.returnType;
@@ -180,11 +201,8 @@ class Resolver implements StmtVisitor, ExprVisitor {
       _resolve(stmt.initializer);
     }
 
-    if (symbols.inScope(name)) {
-      ErrorReporter.report(new SemanticError(stmt.name, "Name '$name' has already been declared in this scope."));
-    } else {
-      symbols.addSymbol(symbol);
-    }
+      symbol.type = stmt.type;
+      symbols.setSymbol(name, symbol);
   }
 
   @override

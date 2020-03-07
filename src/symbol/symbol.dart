@@ -12,22 +12,21 @@ class SymbolTable {
   List<Scope> scopes = [];
   Scope current;
 
-  SymbolTable() {
-    
-  }
-
-  void beginScope() {
-    current = new Scope(current);
+  void beginScope(ScopeType type) {
+    current = new Scope(type, current);
     scopes.add(current);
   }
 
-  int endScope() {
+  void endScope() {
     current = current.enclosing;
-    return scopes.length - 1;
   }
 
   void addSymbol(Symbol symbol) {
     current.addSymbol(symbol);
+  }
+
+  void setSymbol(String name, Symbol symbol) {
+    current.symbols[name] = symbol;
   }
 
   bool inScope(String symbol) {
@@ -43,7 +42,7 @@ class SymbolTable {
 
     return false;
   }
-
+/*
   Symbol getSymbol(String symbol) {
     return current.getSymbol(symbol);
   }
@@ -60,5 +59,5 @@ class SymbolTable {
     }
 
     return null;
-  }
+  }*/
 }

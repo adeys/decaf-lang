@@ -11,7 +11,7 @@ import 'src/semantic/resolver.dart';
 import 'src/symbol/symbol.dart';
 
 
- SymbolTable symbols = new SymbolTable();
+SymbolTable symbols = new SymbolTable();
 
 Object run(String program) {
   try {
