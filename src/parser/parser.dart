@@ -49,7 +49,6 @@ class Parser {
       TokenType.IDENTIFIER: literal,
 
       // Unary
-      TokenType.MINUS: unary,
       TokenType.BANG: unary,
 
       // Misc
@@ -70,7 +69,7 @@ class Parser {
       TokenType.PIPE_PIPE: new InfixRule(Precedence.OR, null, _getLogical),
 
       TokenType.PLUS: sum,
-      TokenType.MINUS: sum,
+      TokenType.MINUS: new InfixRule(Precedence.SUM, _getUnary, _getBinary),
       TokenType.STAR: product,
       TokenType.SLASH: product,
       TokenType.PERCENT: product
@@ -123,7 +122,7 @@ class Parser {
     VarStmt stmt = _getVariable();
 
     if (_match([TokenType.EQUAL])) {
-      stmt.initializer = (_check(TokenType.MINUS) || _check(TokenType.BANG)) ? _getUnary() : _getPrimary();
+      stmt.initializer = _getExpression();
     }
 
     _expect(TokenType.SEMICOLON, "Expect ';' after variable declaration.");

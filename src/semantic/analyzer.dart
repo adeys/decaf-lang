@@ -4,14 +4,15 @@ import '../error/error.dart';
 import '../error/error_reporter.dart';
 import '../symbol/symbol.dart';
 import '../types/type.dart';
+import 'scope_owner.dart';
 
 class Analyzer implements StmtVisitor, ExprVisitor {
-  SymbolTable symbols;
-  int scope = 0;
+  ScopeOwner scopes;
 
-  Analyzer(this.symbols) {
-    /*for (int i = 0; i < this.symbols.scopes.length; i++) {
-      print( "$i -> ${symbols.scopes[i].symbols.keys} -> ${symbols.scopes[i].enclosing?.symbols?.keys}");
+  Analyzer(SymbolTable table) {
+    scopes = new ScopeOwner(table);
+    /*for (int i = 0; i < table.scopes.length; i++) {
+      print( "$i -> ${table.scopes[i]} -> ${table.scopes[i].enclosing}");
     }*/
   }
 
@@ -30,11 +31,11 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   }
 
   void enterScope() {
-    scope++;
+    scopes.beginScope();
   }
 
   void exitScope() {
-    //scope--;
+    scopes.endScope();
   }
 
   void checkCompatible(Type expected, Type current, int line) {
@@ -51,7 +52,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitAssignExpr(AssignExpr expr) {
-    Symbol target = symbols.getFrom(scope, (expr.target as VariableExpr).name.lexeme);
+    Symbol target = scopes.getSymbol((expr.target as VariableExpr).name.lexeme);
     checkAssignment(target.type, resolveType(expr.value), expr.op.line);
   }
 
@@ -85,23 +86,24 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       case '*':
       case '/':
       case '%': 
-        return checkBinary(expr);
+        return expr.type = checkBinary(expr);
       case '<':
       case '<=':
       case '>':
       case '>=':
         Type type = checkBinary(expr);
-        return type != null ?  BuiltinType.BOOL : type;
+        expr.type = type != null ?  BuiltinType.BOOL : type;
+        return expr.type;
       case '==':
       case '!=':
         Type left = resolveType(expr.left);
         Type right = resolveType(expr.left);
         if (!left.check(right)) {
           ErrorReporter.report(new TypeError(expr.op.line, "Operands to '${expr.op.lexeme}' must be of same type. Got('$left' and '$right')."));
-          return BuiltinType.ERROR;
+          return expr.type = BuiltinType.ERROR;
         }
 
-        return BuiltinType.BOOL;
+        return expr.type = BuiltinType.BOOL;
       default:
     }
   }
@@ -123,7 +125,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   @override
   visitCallExpr(CallExpr expr) {
     VariableExpr callee = expr.callee as VariableExpr;
-    Symbol sym = symbols.getFrom(scope, callee.name.lexeme);
+    Symbol sym = scopes.getSymbol(callee.name.lexeme);
     if (sym.type is! FunctionType) {
       ErrorReporter.report(new TypeError(expr.paren.line, "Identifier '${callee.name.lexeme}' is not a function."));
       return BuiltinType.ERROR;
@@ -144,7 +146,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       }
     }
 
-    return func.returnType;
+    return expr.type = func.returnType;
   }
 
   @override
@@ -163,7 +165,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitFunctionStmt(FunctionStmt stmt) {
-    Symbol symbol = symbols.getFrom(scope, stmt.name.lexeme);
+    Symbol symbol = scopes.fromCurrent(stmt.name.lexeme);
 
     enterScope();
 
@@ -173,7 +175,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       params.add(param.type);
     }
 
-    symbol.type = new FunctionType(stmt.returnType, params);
+    (symbol.type as FunctionType).paramsType = params;
 
     resolve(stmt.body);
     exitScope();
@@ -181,7 +183,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitGroupingExpr(GroupingExpr expr) {
-    return resolveType(expr.expression);
+    return expr.type = resolveType(expr.expression);
   }
 
   @override
@@ -211,7 +213,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       ErrorReporter.report(new TypeError(line, "Right operand to '${expr.op.lexeme}' must be of type bool."));
     }
 
-    return BuiltinType.BOOL;
+    return expr.type = BuiltinType.BOOL;
   }
 
   @override
@@ -246,21 +248,20 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     Type type = resolveType(expr.expression);
     if (expr.op.lexeme == '!') {
       checkCompatible(BuiltinType.BOOL, type, expr.op.line);
-      return BuiltinType.BOOL;
+      return expr.type = BuiltinType.BOOL;
     } else {
       String name = (type as BuiltinType).name;
       if (name != 'int' && name != 'double') {
         ErrorReporter.report(new TypeError(expr.op.line, "Operands to unary '-' must be either of type 'int'or 'double'."));
       }
 
-      return type;
+      return expr.type = type;
     }
   }
 
   @override
   visitVarStmt(VarStmt stmt) {
-    Symbol symbol = symbols.getAt(scope, stmt.name.lexeme);
-    symbol.type = stmt.type;
+    Symbol symbol = scopes.fromCurrent(stmt.name.lexeme);
 
     if (stmt.initializer != null) {
       Type type = resolveType(stmt.initializer);
@@ -270,7 +271,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitVariableExpr(VariableExpr expr) {
-    return symbols.getFrom(scope, expr.name.lexeme).type;
+    return scopes.getSymbol(expr.name.lexeme).type;
   }
 
   @override

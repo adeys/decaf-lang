@@ -2,6 +2,7 @@ import 'error.dart';
 
 class ErrorReporter {
   static bool hadError = false;
+  static bool hadRuntimeError = false;
   
   static void report(Error error) {
     hadError = true;
@@ -13,6 +14,12 @@ class ErrorReporter {
       return _semanticError(error);
     } else if (error is TypeError) {
       return _typeError(error);
+    } else if (error is RuntimeError) {
+      hadRuntimeError = true;
+      return _runtimeError(error);
+    } else if (error is CompilerError) {
+      print('Execution Error : ${error.message}');
+      return;
     }
 
     throw error;
@@ -32,5 +39,9 @@ class ErrorReporter {
 
   static void _typeError(TypeError error) {
     print('[line ${error.line}] TypeError : ' + error.message);
+  }
+
+  static void _runtimeError(RuntimeError error) {
+    print('[line ${error.token.line}] RuntimeError : ' + error.message);
   }
 }
