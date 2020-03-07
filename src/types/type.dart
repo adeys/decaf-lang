@@ -81,3 +81,31 @@ class CustomType extends Type {
     return name;
   }
 }
+
+class TypeTable {
+  List<Type> declared = [];
+
+  void addType(Type type) {
+    declared.add(type);
+  }
+
+  bool hasType(Type type) {
+    if (type is BuiltinType || type is FunctionType) {
+      return true;
+    }
+
+    if (type is ArrayType) {
+      while (type is ArrayType) {
+        type = (type as ArrayType).base;
+      }
+
+      return hasType(type);
+    }
+    
+    for (Type item in declared) {
+      if (item.name == type.name)
+        return true;
+    }
+    return false;
+  }
+}

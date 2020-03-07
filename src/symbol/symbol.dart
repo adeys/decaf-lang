@@ -11,6 +11,7 @@ class Symbol {
 class SymbolTable {
   List<Scope> scopes = [];
   Scope current;
+  TypeTable types = new TypeTable();
 
   void beginScope(ScopeType type) {
     current = new Scope(type, current);
@@ -46,6 +47,11 @@ class SymbolTable {
   Symbol getAt(int depth, String symbol) {
     return scopes[depth].getSymbol(symbol);
   }
+
+  void registerType(Type type) {
+    types.addType(type);
+  }
+
 /*
   Symbol getSymbol(String symbol) {
     return current.getSymbol(symbol);

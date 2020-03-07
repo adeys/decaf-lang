@@ -8,9 +8,12 @@ import 'scope_owner.dart';
 
 class Analyzer implements StmtVisitor, ExprVisitor {
   ScopeOwner scopes;
+  TypeTable types;
 
   Analyzer(SymbolTable table) {
     scopes = new ScopeOwner(table);
+    types = table.types;
+
     /*for (int i = 0; i < table.scopes.length; i++) {
       print( "$i -> ${table.scopes[i]} -> ${table.scopes[i].enclosing}");
     }*/
@@ -48,6 +51,16 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     if (!target.isCompatible(value)) {
         ErrorReporter.report(new TypeError(line, "Cannot assign expression of type '${value}' to variable of type '${target}'."));
       }
+  }
+
+  void checkExistence(Type type, int line) {
+    if (!types.hasType(type)) {
+      while (type is ArrayType) {
+        type = (type as ArrayType).base;
+      }
+
+      ErrorReporter.report(new TypeError(line, "No declaration for class '$type' found"));
+    }
   }
 
   @override
@@ -170,6 +183,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitFunctionStmt(FunctionStmt stmt) {
+    checkExistence(stmt.returnType, stmt.name.line);
+
     Symbol symbol = scopes.fromCurrent(stmt.name.lexeme);
 
     enterScope();
@@ -270,6 +285,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   @override
   visitVarStmt(VarStmt stmt) {
     Symbol symbol = scopes.fromCurrent(stmt.name.lexeme);
+
+    checkExistence(symbol.type, stmt.name.line);
 
     if (stmt.initializer != null) {
       Type type = resolveType(stmt.initializer);

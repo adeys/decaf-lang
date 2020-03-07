@@ -271,7 +271,7 @@ class Parser {
     List<Stmt> statements = [];
 
     while (!_check(TokenType.RIGHT_BRACE)) {
-      statements.add(_types.contains(_peek().type) ? _getVarDeclaration() : _getStatement());
+      statements.add(_matchType() ? _getVarDeclaration() : _getStatement());
     }
 
     _expect(TokenType.RIGHT_BRACE, "Expect '}' at block end.");
@@ -281,7 +281,7 @@ class Parser {
 
   ExpressionStmt _getExpressionStmt() {
     Expr expr = _getExpression();
-    _expect(TokenType.SEMICOLON, "Unexpected '${_peek().lexeme}'. Expect ';' after expression.");
+    _expect(TokenType.SEMICOLON, "Expect ';' after expression.");
 
     return new ExpressionStmt(expr);
   }
@@ -456,10 +456,19 @@ class Parser {
   }
 
   bool _matchType() {
+    // Match cases: `Class name` and `Class[]` 
+    if (_check(TokenType.IDENTIFIER) && (_checkNext(TokenType.IDENTIFIER) || _checkNext(TokenType.LEFT_BRACKET))) {
+      return true;
+    }
+
     if (_match(_types)) {
+      // Rollback offset
+      offset--;
+      
       if (_check(TokenType.LEFT_BRACKET) && _checkNext(TokenType.RIGHT_BRACKET)) {
         return true;
       }
+
       return true;
     }
 
@@ -479,7 +488,11 @@ class Parser {
       throw new ParseError(_peek(), 'Expected type expression.');
     }
 
+    _advance();
     Type type = typeMap[_previous.type];
+    if (type == null) {
+      type = new CustomType(_previous.lexeme);
+    }
 
     while (_match([TokenType.LEFT_BRACKET])) {
       _expect(TokenType.RIGHT_BRACKET, "Expected ']' after '[' in type declaration.");

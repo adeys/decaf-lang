@@ -205,7 +205,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitVariableExpr(VariableExpr expr) {
     if (!symbols.hasSymbol(expr.name.lexeme)) {
-      ErrorReporter.report(new SemanticError(expr.name, "No declaration for function '${expr.name.lexeme}' found."));
+      ErrorReporter.report(new SemanticError(expr.name, "No declaration for '${expr.name.lexeme}' found."));
     }
   }
 
@@ -236,6 +236,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     String name = stmt.name.lexeme;
     Symbol symbol = new Symbol(name, new CustomType(name));
     symbols.setSymbol(name, symbol);
+    symbols.registerType(symbol.type);
 
     symbols.beginScope(ScopeType.CLASS);
     // Declare all fields in current scope
