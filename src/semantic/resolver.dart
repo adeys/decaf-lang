@@ -223,4 +223,15 @@ class Resolver implements StmtVisitor, ExprVisitor {
     loop = enclosing;
   }
 
+  @override
+  visitArrayExpr(ArrayExpr expr) {
+    _resolve(expr.size);
+  }
+
+  @override
+  visitIndexExpr(IndexExpr expr) {
+    _resolve(expr.owner);
+    _resolve(expr.index);
+  }
+
 }

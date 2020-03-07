@@ -33,6 +33,37 @@ class VariableExpr implements Expr {
   Type type;
 }
 
+class ArrayExpr implements Expr {
+  @override
+  Type type;
+  Token keyword;
+  Expr size;
+
+  ArrayExpr(this.keyword, this.type, this.size);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitArrayExpr(this);
+  }
+
+}
+
+class IndexExpr implements Expr {
+  @override
+  Type type;
+  Token bracket;
+  Expr owner;
+  Expr index;
+
+  IndexExpr(this.bracket, this.owner, this.index);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitIndexExpr(this);
+  }
+  
+}
+
 class GroupingExpr implements Expr {
   Expr expression;
 
@@ -129,6 +160,10 @@ class CallExpr implements Expr {
 
 abstract class ExprVisitor {
 
+  visitArrayExpr(ArrayExpr expr) {
+    return expr.accept(this);
+  }
+
 	visitAssignExpr(AssignExpr expr) {
 		return expr.accept(this);
 	}
@@ -144,6 +179,10 @@ abstract class ExprVisitor {
 	visitGroupingExpr(GroupingExpr expr) {
 		return expr.accept(this);
 	}
+
+  visitIndexExpr(IndexExpr expr) {
+    return expr.accept(this);
+  }
 
 	visitLiteralExpr(LiteralExpr expr) {
 		return expr.accept(this);

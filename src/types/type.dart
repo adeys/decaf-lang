@@ -46,3 +46,22 @@ class FunctionType extends Type {
     return name;
   }
 }
+
+class ArrayType extends Type {
+  String name;
+  Type base;
+  
+  ArrayType(this.base) {
+    name = '$base[]';
+  }
+
+  @override
+  bool check(Type type) {
+    return (type is ArrayType) && type.name == name;
+  }
+  
+  @override
+  String toString() {
+    return name;
+  }
+}

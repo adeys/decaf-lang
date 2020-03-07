@@ -52,13 +52,24 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitAssignExpr(AssignExpr expr) {
-    Symbol target = scopes.getSymbol((expr.target as VariableExpr).name.lexeme);
-    checkAssignment(target.type, resolveType(expr.value), expr.op.line);
+    if (expr.target is VariableExpr) {
+      Symbol target = scopes.getSymbol((expr.target as VariableExpr).name.lexeme);
+      checkAssignment(target.type, resolveType(expr.value), expr.op.line);
+    } else if (expr.target is IndexExpr) {
+      IndexExpr target = expr.target as IndexExpr;
+      checkAssignment(resolveType(target.owner), resolveType(expr.value), expr.op.line);
+    }
   }
 
   Type checkBinary(BinaryExpr expr) {
-    BuiltinType left = resolveType(expr.left) as BuiltinType;
-    BuiltinType right = resolveType(expr.right) as BuiltinType;
+    Type left = resolveType(expr.left);
+    Type right = resolveType(expr.right);
+    
+    if (left is! BuiltinType || right is! BuiltinType) {
+      ErrorReporter.report(new TypeError(expr.op.line, "Incompatible operands: $left ${expr.op.lexeme} $right."));
+      return BuiltinType.ERROR;
+    }
+
     Type ret;
     if (left.name != BuiltinType.INT.name && left.name != BuiltinType.DOUBLE.name) {
       ErrorReporter.report(new TypeError(expr.op.line, "Left operand to '${expr.op.lexeme}' must be either of type int or double."));
@@ -223,7 +234,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     for (int i = 0; i < stmt.expressions.length; i++) {
       Type type = resolveType(stmt.expressions[i]);
       if (!allowed.contains(type.name)) {
-        ErrorReporter.report(new TypeError(stmt.keyword.line, "Parameter $i to print does not have a valid type (int, bool, string)."));
+        ErrorReporter.report(new TypeError(stmt.keyword.line, "Parameter ${i + 1} to print does not have a valid type (int, bool, string)."));
       }
     }
   }
@@ -251,7 +262,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       return expr.type = BuiltinType.BOOL;
     } else {
       String name = (type as BuiltinType).name;
-      if (name != 'int' && name != 'double') {
+      if (name != BuiltinType.INT.name && name != BuiltinType.DOUBLE.name) {
         ErrorReporter.report(new TypeError(expr.op.line, "Operands to unary '-' must be either of type 'int'or 'double'."));
       }
 
@@ -278,5 +289,26 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   visitWhileStmt(WhileStmt stmt) {
     checkCompatible(BuiltinType.BOOL, resolveType(stmt.condition), stmt.keyword.line);
     resolve(stmt.body);
+  }
+
+  @override
+  visitArrayExpr(ArrayExpr expr) {
+    Type type = resolveType(expr.size);
+    if (!BuiltinType.INT.check(type)) {
+      ErrorReporter.report(new TypeError(expr.keyword.line, "Array size must be of type 'int'. Got $type"));
+    }
+
+    return expr.type = new ArrayType(expr.type);
+  }
+
+  @override
+  visitIndexExpr(IndexExpr expr) {
+    Type type = resolveType(expr.owner);
+    if (type is! ArrayType) {
+      ErrorReporter.report(new TypeError(expr.bracket.line, "Cannot access index on non-array variable."));
+      return BuiltinType.ERROR;
+    }
+
+    return (type as ArrayType).base;
   }
 }

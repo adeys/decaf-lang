@@ -59,6 +59,8 @@ class Lexer {
       case ')': return _makeToken(TokenType.RIGHT_PAREN, char);
       case '{': return _makeToken(TokenType.LEFT_BRACE, char);
       case '}': return _makeToken(TokenType.RIGHT_BRACE, char);
+      case '[': return _makeToken(TokenType.LEFT_BRACKET, char);
+      case ']': return _makeToken(TokenType.RIGHT_BRACKET, char);
       case ',': return _makeToken(TokenType.COMMA, char);
       case '.': return _makeToken(TokenType.DOT, char);
       case ';': return _makeToken(TokenType.SEMICOLON, char);
