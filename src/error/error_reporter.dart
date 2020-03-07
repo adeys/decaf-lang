@@ -17,6 +17,9 @@ class ErrorReporter {
     } else if (error is RuntimeError) {
       hadRuntimeError = true;
       return _runtimeError(error);
+    } else if (error is CompilerError) {
+      print('Execution Error : ${error.message}');
+      return;
     }
 
     throw error;
@@ -39,6 +42,6 @@ class ErrorReporter {
   }
 
   static void _runtimeError(RuntimeError error) {
-    print('[line ${error.token.line}] TypeError : ' + error.message);
+    print('[line ${error.token.line}] RuntimeError : ' + error.message);
   }
 }

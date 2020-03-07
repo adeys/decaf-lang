@@ -3,7 +3,7 @@ import '../error/error.dart';
 import '../lexer/tokens.dart';
 
 class Environment {
-	Map<String, Object> _store = new Map<String, Object>();
+	Map<String, Object> store = new Map<String, Object>();
 	Environment parent = null;
 
 	Environment([Environment _parent = null]) {
@@ -11,12 +11,12 @@ class Environment {
 	}
 
 	void define(String name, Object value) {
-		_store[name] = value;
+		store[name] = value;
 	}
 
 	void assign(Token name, Object value) {
-		if (_store.containsKey(name.lexeme)) {
-			_store[name.lexeme] =  value;
+		if (store.containsKey(name.lexeme)) {
+			store[name.lexeme] =  value;
 			return;
 		}
 
@@ -29,12 +29,12 @@ class Environment {
 	}
 
 	void assignAt(int dist, Token name, Object value) {
-		_ancestor(dist)._store[name.lexeme] = value;
+		_ancestor(dist).store[name.lexeme] = value;
 	}
 
 	Object get(Token name) {
-		if (_store.containsKey(name.lexeme)) {
-			return _store[name.lexeme];
+		if (store.containsKey(name.lexeme)) {
+			return store[name.lexeme];
 		}
 
 		if (parent != null) return parent.get(name);
@@ -43,7 +43,7 @@ class Environment {
 	}
 
 	Object getAt(int dist, String name) {
-		return _ancestor(dist)._store[name];
+		return _ancestor(dist).store[name];
 	}
 
 	Environment _ancestor(int depth) {

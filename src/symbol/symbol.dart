@@ -42,13 +42,13 @@ class SymbolTable {
 
     return false;
   }
-/*
-  Symbol getSymbol(String symbol) {
-    return current.getSymbol(symbol);
-  }
 
   Symbol getAt(int depth, String symbol) {
     return scopes[depth].getSymbol(symbol);
+  }
+/*
+  Symbol getSymbol(String symbol) {
+    return current.getSymbol(symbol);
   }
 
   Symbol getFrom(int depth, String symbol) {

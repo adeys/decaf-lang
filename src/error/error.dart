@@ -35,5 +35,8 @@ class RuntimeError extends CompilerError {
   Token token;
 
   RuntimeError(this.token, String message) : super(message);
-  
+}
+
+class DivisionByZeroError extends RuntimeError  {
+  DivisionByZeroError(Token token) : super(token, "Cannot divide by zero.");
 }
