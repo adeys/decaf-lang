@@ -110,7 +110,6 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       for (Stmt stmt in statements) {
         _execute(stmt);
       }
-    } on Break catch(_) {
     } finally {
       _env = old;
     }
@@ -144,8 +143,12 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   visitForStmt(ForStmt stmt) {
     if (stmt.initializer != null) _evaluate(stmt.initializer);
     while (_evaluate(stmt.condition).value == true) {
-      _execute(stmt.body);
-      if (stmt.incrementer != null) _evaluate(stmt.incrementer);
+      try {
+        _execute(stmt.body);
+        if (stmt.incrementer != null) _evaluate(stmt.incrementer);
+      } on Break catch(_) {
+        return;
+      }
     }
   }
 
@@ -230,7 +233,11 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   @override
   visitWhileStmt(WhileStmt stmt) {
     while (_evaluate(stmt.condition).value == true) {
-      _execute(stmt.body);
+      try {
+        _execute(stmt.body);
+      } on Break catch(_) {
+        return;
+      }
     }
   }
 
