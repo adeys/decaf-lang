@@ -133,11 +133,15 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitCallExpr(CallExpr expr) {
-    DecafCallable callable = _evaluate(expr.callee);
+    Value callable = _evaluate(expr.callee);
 
-    List<Value> args = expr.arguments.map((Expr expr) => _evaluate(expr)).toList();
+    if (callable is DecafCallable) {
+      List<Value> args = expr.arguments.map((Expr expr) => _evaluate(expr)).toList();
 
-    return callable.callFun(this, args);
+      return callable.callFun(this, args);
+    } else if (callable is ArrayValue) {
+      return new Value(BuiltinType.INT, callable.size);
+    }
   }
 
   @override
@@ -295,9 +299,10 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitAccessExpr(AccessExpr expr) {
-    DecafInstance instance = _evaluate(expr.object);
-    
-    return instance.getField((expr.field as VariableExpr).name.lexeme);
+    Value instance = _evaluate(expr.object);
+    if (instance is DecafInstance) {
+      return instance.getField((expr.field as VariableExpr).name.lexeme);
+    } else return instance;
   }
 
   @override
