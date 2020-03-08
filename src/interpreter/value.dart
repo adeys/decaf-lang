@@ -7,6 +7,7 @@ import 'interpreter.dart';
 class Value {
   Object value;
   Type type;
+  bool initialized = false;
 
   Value(this.type, [this.value]);
 
@@ -93,6 +94,9 @@ class DecafFunction extends DecafCallable {
   bool equalsTo(Value value) {
     return false;
   }
+
+  @override
+  bool initialized = true;
 }
 
 class DecafClass {
@@ -131,6 +135,9 @@ class DecafInstance implements Value {
   bool equalsTo(Value value) {
     return this == value;
   }
+
+  @override
+  bool initialized = true;
 }
 
 class Return {

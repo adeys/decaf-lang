@@ -4,6 +4,7 @@ import 'scope.dart';
 class Symbol {
   String name;
   Type type;
+  bool initialized = false;
 
   Symbol(this.name, [this.type]);
 }
@@ -63,14 +64,14 @@ class SymbolTable {
   Symbol getSymbol(String symbol) {
     return current.getSymbol(symbol);
   }
-
-  Symbol getFrom(int depth, String symbol) {
-    Scope scope = scopes[depth];
+*/
+  Symbol getSymbol(String symbol) {
+    Scope scope = current;
     while (scope != null) {
       if (scope.has(symbol)) return scope.getSymbol(symbol);
       scope = scope.enclosing;
     }
 
     return null;
-  }*/
+  }
 }

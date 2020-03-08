@@ -208,6 +208,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     Symbol symbol = new Symbol(name);
     if (stmt.initializer != null) {
       _resolve(stmt.initializer);
+      symbol.initialized = true;
     }
 
     symbol.type = stmt.type;
@@ -241,6 +242,13 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitIndexExpr(IndexExpr expr) {
     _resolve(expr.owner);
     _resolve(expr.index);
+    
+    if (expr.owner is VariableExpr) {
+      String owner = (expr.owner as VariableExpr).name.lexeme;
+      if (!symbols.getSymbol(owner).initialized) {
+        ErrorReporter.report(new SemanticError(expr.bracket, "Cannot subscript unitialized array."));
+      }
+    }
   }
 
   @override
@@ -282,6 +290,15 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitAccessExpr(AccessExpr expr) {
     _resolve(expr.object);
+    
+    if (expr.object is VariableExpr) {
+      String owner = (expr.object as VariableExpr).name.lexeme;
+      String field = (expr.field as VariableExpr).name.lexeme;
+
+      if (!symbols.getSymbol(owner).initialized) {
+        ErrorReporter.report(new SemanticError(expr.dot, "Cannot access '$field' on unitialized object."));
+      }
+    }
   }
 
   @override
