@@ -51,7 +51,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     name = (stmt as DeclStmt).name;
 
     if (symbols.inScope(name.lexeme)) {
-      ErrorReporter.report(new SemanticError(name, "Name '${name.lexeme}' has already been declared in this scope."));
+      ErrorReporter.report(new SemanticError(name, "Declaration of '${name.lexeme}' here conflicts with previous declaration."));
     }
     
     symbols.addSymbol(new Symbol(name.lexeme));

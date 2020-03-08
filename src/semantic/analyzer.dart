@@ -2,6 +2,7 @@ import '../ast/expression.dart';
 import '../ast/statement.dart';
 import '../error/error.dart';
 import '../error/error_reporter.dart';
+import '../symbol/scope.dart';
 import '../symbol/symbol.dart';
 import '../types/type.dart';
 import 'scope_owner.dart';
@@ -9,6 +10,7 @@ import 'scope_owner.dart';
 class Analyzer implements StmtVisitor, ExprVisitor {
   ScopeOwner scopes;
   TypeTable types;
+  ScopeType currentScope =  ScopeType.GLOBAL;
 
   Analyzer(SymbolTable table) {
     scopes = new ScopeOwner(table);
@@ -354,7 +356,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   @override
   visitClassStmt(ClassStmt stmt) {
     enterScope();
-    
+    currentScope = ScopeType.CLASS;
+
     for (VarStmt field in stmt.fields) {
       resolve(field);
     }
@@ -364,6 +367,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     }
 
     exitScope();
+    currentScope = ScopeType.GLOBAL;
   }
 
   @override
@@ -379,7 +383,13 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
     // Check wether the class has the field
     if (target.scope.has(field)) {
-      return target.scope.getSymbol(field).type;
+      type = target.scope.getSymbol(field).type;
+      if (type is! FunctionType && currentScope != ScopeType.CLASS) {
+        ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' only accessible within class scope."));
+        return BuiltinType.NULL;
+      }
+
+      return type;
     } else {
       ErrorReporter.report(new TypeError(expr.dot.line, "$target has no such field '$field'."));
       return BuiltinType.NULL;
