@@ -23,7 +23,7 @@ class Lexer {
     //"interface": TokenType.INTERFACE,
     "null": TokenType.NULL,
     "this": TokenType.THIS,
-    //"extends": TokenType.EXTENDS,
+    "extends": TokenType.EXTENDS,
     //"implements": TokenType.IMPLEMENTS,
     "for": TokenType.FOR,
     "while": TokenType.WHILE,

@@ -71,12 +71,29 @@ class ArrayType extends Type {
 class CustomType extends Type {
   String name;
   Scope scope;
+  CustomType parent;
 
   CustomType(this.name);
 
+  bool hasParent(String type) {
+    CustomType _class = parent;
+    while (_class != null) {
+      if (_class.name == type)
+        return true;
+      _class = _class.parent;
+    }
+
+    return false;
+  }
+
   @override
   bool isCompatible(Type type) {
-    return (type == BuiltinType.NULL) || (type is CustomType && type.name == name);
+    if (type == BuiltinType.NULL) return true;
+
+    if (type is! CustomType) return false;
+
+    return type.name == name
+      || (type as CustomType).hasParent(name);
   }
   
   @override
@@ -94,10 +111,15 @@ class TypeTable {
 
   void setType(String name, Type type) {
     declared[name] = type;
+    type.name = name;
   }
 
   Type getType(Type type) {
     return declared[type.name];
+  }
+
+  Type getNamedType(String name) {
+    return declared[name];
   }
 
   bool hasNamedType(String name) {

@@ -33,6 +33,7 @@ class ArrayValue extends Value {
   ArrayValue(Type type, this.size) : super(type) {
     values = new List<Value>(size);
     values.fillRange(0, size - 1, new Value(type));
+    initialized = true;
   }
 
   void set(int index, Value value) {
@@ -102,6 +103,7 @@ class DecafFunction extends DecafCallable {
 class DecafClass {
   String name;
   Environment scope;
+  bool hasParent = false;
 
   DecafClass(this.name, [this.scope]);
 }
@@ -114,6 +116,10 @@ class DecafInstance implements Value {
   Value getField(String name) {
     Value field = _class.scope.getAt(0, name);
     
+    if (field == null && _class.hasParent) {
+      return _class.scope.getAt(1, name);
+    }
+
     if (field is DecafFunction) {
       field.enclosing.define('this', this);
     }

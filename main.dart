@@ -28,7 +28,7 @@ Object run(String program) {
     Resolver resolver = new Resolver(symbols);
 
     resolver.resolve(ast);
-    if (ErrorReporter.hadError) exit(65);
+    //if (ErrorReporter.hadError) exit(65);
 
     Analyzer analyzer = new Analyzer(symbols);
     analyzer.check(ast);

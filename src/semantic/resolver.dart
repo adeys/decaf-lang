@@ -68,6 +68,11 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitAssignExpr(AssignExpr expr) {
     _resolve(expr.target);
     _resolve(expr.value);
+
+    if (expr.target is VariableExpr) {
+      String target = (expr.target as VariableExpr).name.lexeme;
+      symbols.getSymbol(target).initialized = true;
+    }
   }
 
   @override
@@ -254,12 +259,26 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitClassStmt(ClassStmt stmt) {
     String name = stmt.name.lexeme;
-    CustomType type = new CustomType(name);
-    Symbol symbol = new Symbol(name, type);
+    Symbol symbol = new Symbol(name, symbols.getType(name));
     
     currentClass = symbol;
     symbols.setSymbol(name, symbol);
-    symbols.updateType(type);
+    //symbols.updateType(type);
+
+    // Check parent class
+    if (stmt.parent != null) {
+      if (stmt.parent.lexeme == stmt.name.lexeme) {
+        ErrorReporter.report(new SemanticError(stmt.parent, "Cannot extends self class '${stmt.parent.lexeme}'."));
+      } else {
+        if (!symbols.typeExists(stmt.parent.lexeme)) {
+          ErrorReporter.report(new SemanticError(stmt.parent, "No declaration for class '${stmt.parent.lexeme}' found."));
+        } else {
+          CustomType curr = symbols.getType(name) as CustomType;
+          Type parent = symbols.getType(stmt.parent.lexeme);
+          curr.parent = parent;
+        }
+      }
+    }
 
     symbols.beginScope(ScopeType.CLASS);
     // Declare all fields in current scope
@@ -281,7 +300,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
       _resolve(method);
     }
 
-    type.scope = symbols.current;
+    (symbols.getType(name) as CustomType).scope = symbols.current;
     symbols.endScope();
 
     currentClass = null;

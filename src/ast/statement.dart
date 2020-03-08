@@ -140,10 +140,11 @@ class FunctionStmt implements Stmt, DeclStmt {
 
 class ClassStmt implements Stmt, DeclStmt {
   Token name;
+  Token parent;
   List<VarStmt> fields;
   List<FunctionStmt> methods;
 
-  ClassStmt(this.name, this.fields, this.methods);
+  ClassStmt(this.name, this.parent, this.fields, this.methods);
   
   @override
   void accept(StmtVisitor visitor) {

@@ -113,6 +113,11 @@ class Parser {
 
   ClassStmt _getClassDeclaration() {
     Token name = _expect(TokenType.IDENTIFIER, "Expect class name.");
+    Token parent;
+    
+    if (_match([TokenType.EXTENDS])) {
+      parent = _expect(TokenType.IDENTIFIER, "Expect parent class name.");
+    }
 
     List<VarStmt> fields = [];
     List<FunctionStmt> methods = [];
@@ -123,7 +128,7 @@ class Parser {
     }
     _expect(TokenType.RIGHT_BRACE, "Expect '}' at class declaration end.");
 
-    return new ClassStmt(name, fields, methods);
+    return new ClassStmt(name, parent, fields, methods);
   }
 
   VarStmt _getVariable() {

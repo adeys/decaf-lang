@@ -301,8 +301,13 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     }
 
     klass.scope = _env;
-    
     _env = _env.parent;
+
+    if (stmt.parent != null) {
+      klass.hasParent = true;
+      klass.scope.parent = (_globals.getAt(0, stmt.parent.lexeme) as DecafClass).scope;
+    }
+    
     _env.assign(stmt.name, klass);
   }
 

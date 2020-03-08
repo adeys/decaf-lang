@@ -51,8 +51,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   void checkAssignment(Type target, Type value, line) {
     if (!target.isCompatible(value)) {
-        ErrorReporter.report(new TypeError(line, "Cannot assign expression of type '${value}' to variable of type '${target}'."));
-      }
+      ErrorReporter.report(new TypeError(line, "Cannot assign expression of type '${value}' to variable of type '${target}'."));
+    }
   }
 
   void checkExistence(Type type, int line) {
@@ -429,7 +429,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       return;
     }
 
-    return expr.type;
+    return expr.type = types.getNamedType(expr.type.name);
   }
 
   @override

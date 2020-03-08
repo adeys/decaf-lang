@@ -60,6 +60,10 @@ class SymbolTable {
   bool typeExists(String name) {
     return types.hasNamedType(name);
   }
+
+  Type getType(String name) {
+    return types.getNamedType(name);
+  }
 /*
   Symbol getSymbol(String symbol) {
     return current.getSymbol(symbol);
