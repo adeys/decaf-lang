@@ -22,6 +22,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
   ScopeKind scope = ScopeKind.GLOBAL;
   FunctionStmt currentFunc;
   LoopScope loop = LoopScope.NONE;
+  Symbol currentClass = null;
   List<int> scopes = [];
 
   Resolver(this.symbols) {
@@ -236,6 +237,8 @@ class Resolver implements StmtVisitor, ExprVisitor {
     String name = stmt.name.lexeme;
     CustomType type = new CustomType(name);
     Symbol symbol = new Symbol(name, type);
+    
+    currentClass = symbol;
     symbols.setSymbol(name, symbol);
     symbols.registerType(type);
 
@@ -261,11 +264,24 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     type.scope = symbols.current;
     symbols.endScope();
+
+    currentClass = null;
   }
 
   @override
   visitAccessExpr(AccessExpr expr) {
     _resolve(expr.target);
+  }
+
+  @override
+  visitThisExpr(ThisExpr expr) {
+    if (currentClass == null) {
+      ErrorReporter.report(new SemanticError(expr.keyword, "’this’ is only valid within class scope."));
+      expr.type = BuiltinType.NULL;
+      return;
+    }
+    
+    expr.type = currentClass.type;
   }
 
 }

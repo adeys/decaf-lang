@@ -28,10 +28,7 @@ class Parser {
 
     PrefixRule literal = new PrefixRule(Precedence.NONE, _getPrimary);
     PrefixRule unary = new PrefixRule(Precedence.UNARY, _getUnary);
-
-    InfixRule dot = new InfixRule(Precedence.CALL, null, _getDot);
     
-    InfixRule assign = new InfixRule(Precedence.ASSIGNMENT, null, _getAssignment);
     InfixRule equality = new InfixRule(Precedence.EQUALITY);
     InfixRule comparison = new InfixRule(Precedence.COMPARISON);
     InfixRule sum = new InfixRule(Precedence.SUM);
@@ -46,6 +43,7 @@ class Parser {
       TokenType.DOUBLE: literal,
       TokenType.INTEGER: literal,
       TokenType.IDENTIFIER: literal,
+      TokenType.THIS: literal,
 
       // Unary
       TokenType.BANG: unary,
@@ -54,10 +52,10 @@ class Parser {
       TokenType.LEFT_BRACKET: new InfixRule(Precedence.CALL, null, _getIndex),
       TokenType.LEFT_PAREN: new InfixRule(Precedence.CALL, _getGroupingExpr, _getCall),
       TokenType.ARRAY: new PrefixRule(Precedence.NONE, _getArrayExpr),
-      TokenType.DOT: dot,
+      TokenType.DOT: new InfixRule(Precedence.CALL, null, _getDot),
 
       // Binary
-      TokenType.EQUAL: assign,
+      TokenType.EQUAL: new InfixRule(Precedence.ASSIGNMENT, null, _getAssignment),
       TokenType.EQUAL_EQUAL: equality,
       TokenType.BANG_EQUAL: equality,
 
@@ -364,7 +362,7 @@ class Parser {
   }
 
   AssignExpr _getAssignment(Expr left, int _) {
-    if (left is! VariableExpr && left is! IndexExpr) 
+    if (left is! VariableExpr && left is! IndexExpr && left is! AccessExpr) 
       throw new ParseError(_previous, "Invalid assignment target.");
 
     Token keyword = _previous;
@@ -404,8 +402,9 @@ class Parser {
       if (_match([TokenType.DOUBLE])) return new LiteralExpr(BuiltinType.DOUBLE, _previous.value);
       if (_match([TokenType.STRING])) return new LiteralExpr(BuiltinType.STRING, _previous.value);
       if (_match([TokenType.IDENTIFIER])) return new VariableExpr(_previous);
+      if (_match([TokenType.THIS])) return new ThisExpr(_previous);
       
-      throw new ParseError(_peek(), "Unexpected '${_peek().lexeme}' Expected constant or variable expression.");
+      throw new ParseError(_peek(), "Expected constant or variable expression.");
   }
 
   // Parsing functions

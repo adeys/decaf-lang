@@ -80,6 +80,20 @@ class AccessExpr implements Expr {
 
 }
 
+class ThisExpr implements Expr {
+  @override
+  Type type;
+  Token keyword;
+
+  ThisExpr(this.keyword);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitThisExpr(this);
+  }
+  
+}
+
 class GroupingExpr implements Expr {
   Expr expression;
 
@@ -211,6 +225,10 @@ abstract class ExprVisitor {
 	visitLogicalExpr(LogicalExpr expr) {
 		return expr.accept(this);
 	}
+
+  visitThisExpr(ThisExpr expr) {
+    return expr.accept(this);
+  }
 
 	visitUnaryExpr(UnaryExpr expr) {
 		return expr.accept(this);

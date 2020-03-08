@@ -290,5 +290,11 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     // TODO: implement visitAccessExpr
     return null;
   }
+
+  @override
+  visitThisExpr(ThisExpr expr) {
+    // TODO: implement visitThisExpr
+    return null;
+  }
   
 }

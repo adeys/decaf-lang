@@ -71,6 +71,9 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     } else if (expr.target is IndexExpr) {
       IndexExpr target = expr.target as IndexExpr;
       checkAssignment((resolveType(target.owner) as ArrayType).base, resolveType(expr.value), expr.op.line);
+    } else if (expr.target is AccessExpr) {
+      AccessExpr target = expr.target as AccessExpr;
+      checkAssignment(resolveType(target), resolveType(expr.value), expr.op.line);
     }
   }
 
@@ -381,5 +384,10 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       ErrorReporter.report(new TypeError(expr.dot.line, "$target has no such field '$field'."));
       return BuiltinType.NULL;
     }
+  }
+
+  @override
+  visitThisExpr(ThisExpr expr) {
+    return expr.type;
   }
 }
