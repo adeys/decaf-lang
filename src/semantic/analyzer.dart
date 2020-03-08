@@ -372,7 +372,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitAccessExpr(AccessExpr expr) {
-    Type type = resolveType(expr.target);
+    Type type = resolveType(expr.object);
     if (type is! CustomType) {
       ErrorReporter.report(new TypeError(expr.dot.line, "$type has no such field '${(expr.field as VariableExpr).name.lexeme}'."));
       return;
@@ -386,7 +386,6 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       type = target.scope.getSymbol(field).type;
       if (type is! FunctionType && currentScope != ScopeType.CLASS) {
         ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' only accessible within class scope."));
-        return BuiltinType.NULL;
       }
 
       return type;
@@ -398,6 +397,17 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitThisExpr(ThisExpr expr) {
+    return expr.type;
+  }
+
+  @override
+  visitNewExpr(NewExpr expr) {
+    if (!types.hasType(expr.type)) {
+      ErrorReporter.report(new TypeError(expr.keyword.line, "No declaration for class ’${expr.type}’ found."));
+      expr.type = BuiltinType.NULL;
+      return;
+    }
+
     return expr.type;
   }
 }

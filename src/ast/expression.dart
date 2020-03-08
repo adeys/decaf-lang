@@ -68,10 +68,10 @@ class AccessExpr implements Expr {
   @override
   Type type;
   Token dot;
-  Expr target;
+  Expr object;
   Expr field;
 
-  AccessExpr(this.dot, this.target, this.field);
+  AccessExpr(this.dot, this.object, this.field);
 
   @override
   Object accept(ExprVisitor visitor) {
@@ -90,6 +90,20 @@ class ThisExpr implements Expr {
   @override
   Object accept(ExprVisitor visitor) {
     return visitor.visitThisExpr(this);
+  }
+  
+}
+
+class NewExpr implements Expr {
+  @override
+  Type type;
+  Token keyword;
+
+  NewExpr(this.keyword, this.type);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitNewExpr(this);
   }
   
 }
@@ -225,6 +239,10 @@ abstract class ExprVisitor {
 	visitLogicalExpr(LogicalExpr expr) {
 		return expr.accept(this);
 	}
+
+  visitNewExpr(NewExpr expr) {
+    return expr.accept(this);
+  }
 
   visitThisExpr(ThisExpr expr) {
     return expr.accept(this);

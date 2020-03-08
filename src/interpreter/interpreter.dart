@@ -15,9 +15,10 @@ class Break {
 class Interpreter implements StmtVisitor, ExprVisitor {
   SymbolTable symbols;
   Environment _env;
+  Environment _globals = new Environment();
 
   Interpreter(this.symbols) {
-    _env = new Environment();
+    _env = _globals;
   }
 
   Value evaluate(List<Stmt> ast) {
@@ -33,7 +34,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     }
 
     // Execute the main function
-    return (_env.getAt(0, 'main') as DecafFunction).callFun(this, []);
+    return (_globals.getAt(0, 'main') as DecafFunction).callFun(this, []);
   }
 
   Value _execute(Stmt stmt) {
@@ -67,8 +68,13 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       }
       
       array.set(index, value);
+    } else if (expr.target is AccessExpr) {
+      AccessExpr target = expr.target as AccessExpr;
+      DecafInstance instance = _evaluate(target.object);
+      VariableExpr field = target.field as VariableExpr;
+      
+      instance.setField(field.name, _evaluate(expr.value));
     }
-
   }
 
   @override
@@ -219,8 +225,10 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitVarStmt(VarStmt stmt) {
-    Value value = new Value(stmt.type);
-    value.value = stmt.initializer != null ? _evaluate(stmt.initializer).value : null;
+    Value value = new Value(stmt.type, null);
+    if (stmt.initializer != null) {
+      value = _evaluate(stmt.initializer);
+    }
 
     _env.define(stmt.name.lexeme, value);
   }
@@ -287,14 +295,21 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitAccessExpr(AccessExpr expr) {
-    // TODO: implement visitAccessExpr
-    return null;
+    DecafInstance instance = _evaluate(expr.object);
+    
+    return instance.getField((expr.field as VariableExpr).name.lexeme);
   }
 
   @override
   visitThisExpr(ThisExpr expr) {
-    // TODO: implement visitThisExpr
-    return null;
+    return _env.getAt(2, 'this');
+  }
+
+  @override
+  visitNewExpr(NewExpr expr) {
+    DecafClass klass = _globals.getAt(0, expr.type.name);
+    
+    return new DecafInstance(expr.type, klass);
   }
   
 }

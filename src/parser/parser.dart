@@ -286,7 +286,19 @@ class Parser {
 
   // Expressions parsing
   Expr _getExpression() {
+    if (_match([TokenType.NEW])) return _getNewExpr();
+
     return _parsePrecedence(Precedence.NONE);
+  }
+
+  NewExpr _getNewExpr() {
+    Token keyword = _previous;
+
+    _expect(TokenType.LEFT_PAREN, "Expect '(' after 'new'.");
+    Type type = _expectType(false);
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after new expression.");
+
+    return new NewExpr(keyword, type);
   }
 
   Expr _parsePrecedence(int precedence, [bool assoc = true]) {

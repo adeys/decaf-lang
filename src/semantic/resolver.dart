@@ -270,7 +270,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
   @override
   visitAccessExpr(AccessExpr expr) {
-    _resolve(expr.target);
+    _resolve(expr.object);
   }
 
   @override
@@ -282,6 +282,15 @@ class Resolver implements StmtVisitor, ExprVisitor {
     }
     
     expr.type = currentClass.type;
+  }
+
+  @override
+  visitNewExpr(NewExpr expr) {
+    if (expr.type is! CustomType) {
+      ErrorReporter.report(new TypeError(expr.keyword.line, "’${expr.type}’ is not a class."));
+      expr.type = BuiltinType.NULL;
+      return;
+    }
   }
 
 }
