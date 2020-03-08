@@ -86,14 +86,22 @@ class CustomType extends Type {
 }
 
 class TypeTable {
-  List<Type> declared = [];
+  Map<String, Type> declared = {};
 
   void addType(Type type) {
-    declared.add(type);
+    declared[type.name] = type;
+  }
+
+  void setType(String name, Type type) {
+    declared[name] = type;
   }
 
   Type getType(Type type) {
-    return declared.firstWhere((Type current) => current.name == type.name);
+    return declared[type.name];
+  }
+
+  bool hasNamedType(String name) {
+    return declared.keys.contains(name);
   }
 
   bool hasType(Type type) {
@@ -109,10 +117,6 @@ class TypeTable {
       return hasType(type);
     }
     
-    for (Type item in declared) {
-      if (item.name == type.name)
-        return true;
-    }
-    return false;
+    return declared.keys.contains(type.name);
   }
 }

@@ -322,6 +322,11 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitVariableExpr(VariableExpr expr) {
+    String name = expr.name.lexeme;
+    if (types.hasNamedType(name)) {
+      ErrorReporter.report(new TypeError(expr.name.line, "No declaration found for variable '$name'."));
+      return BuiltinType.ERROR;
+    }
     return scopes.getSymbol(expr.name.lexeme).type;
   }
 
@@ -381,6 +386,13 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
     if (type is ArrayType && field == 'length') {
       return type;
+    }
+
+    if (expr.object is VariableExpr) {
+      if (types.hasNamedType((expr.object as VariableExpr).name.lexeme)) {
+        ErrorReporter.report(new TypeError(expr.dot.line, "Cannot get field '$field' on $type."));
+        return;
+      }
     }
 
     if (type is! CustomType) {

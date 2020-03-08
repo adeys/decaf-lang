@@ -55,6 +55,9 @@ class Resolver implements StmtVisitor, ExprVisitor {
     }
     
     symbols.addSymbol(new Symbol(name.lexeme));
+    if (stmt is ClassStmt) {
+      symbols.registerType(new CustomType(stmt.name.lexeme));
+    }
   }
 
   void _resolve(dynamic node) {
@@ -130,6 +133,10 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     symbols.beginScope(ScopeType.FORMALS);
     for (VarStmt param in stmt.params) {
+      declare(param);
+    }
+    
+    for (VarStmt param in stmt.params) {
       _resolve(param);
     }
     
@@ -194,13 +201,18 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitVarStmt(VarStmt stmt) {
     String name = stmt.name.lexeme;
 
+    if (symbols.typeExists(name)) {
+      ErrorReporter.report(new SemanticError(stmt.name, "Cannot use class name $name as object instance name."));
+    }
+
     Symbol symbol = new Symbol(name);
     if (stmt.initializer != null) {
       _resolve(stmt.initializer);
+      symbol.initialized = true;
     }
 
-      symbol.type = stmt.type;
-      symbols.setSymbol(name, symbol);
+    symbol.type = stmt.type;
+    symbols.setSymbol(name, symbol);
   }
 
   @override
@@ -230,6 +242,13 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitIndexExpr(IndexExpr expr) {
     _resolve(expr.owner);
     _resolve(expr.index);
+    
+    if (expr.owner is VariableExpr) {
+      String owner = (expr.owner as VariableExpr).name.lexeme;
+      if (!symbols.getSymbol(owner).initialized) {
+        ErrorReporter.report(new SemanticError(expr.bracket, "Cannot subscript unitialized array."));
+      }
+    }
   }
 
   @override
@@ -240,7 +259,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     
     currentClass = symbol;
     symbols.setSymbol(name, symbol);
-    symbols.registerType(type);
+    symbols.updateType(type);
 
     symbols.beginScope(ScopeType.CLASS);
     // Declare all fields in current scope
@@ -271,6 +290,15 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitAccessExpr(AccessExpr expr) {
     _resolve(expr.object);
+    
+    if (expr.object is VariableExpr) {
+      String owner = (expr.object as VariableExpr).name.lexeme;
+      String field = (expr.field as VariableExpr).name.lexeme;
+
+      if (!symbols.getSymbol(owner).initialized) {
+        ErrorReporter.report(new SemanticError(expr.dot, "Cannot access '$field' on unitialized object."));
+      }
+    }
   }
 
   @override

@@ -79,8 +79,11 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitBinaryExpr(BinaryExpr expr) {
-    Object left = _evaluate(expr.left).value;
-    Object right = _evaluate(expr.right).value;
+    Value leftVal = _evaluate(expr.left);
+    Value rightVal = _evaluate(expr.right);
+
+    Object left = leftVal.value;
+    Object right = rightVal.value;
 
     Object value;
 
@@ -100,8 +103,8 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       case '<=': value = (left as num) <= (right as num); break;
       case '>': value = (left as num) > (right as num); break;
       case '>=': value = (left as num) >= (right as num); break;
-      case '==': value = left == right; break;
-      case '!=': value = left != right; break;
+      case '==': value = leftVal.equalsTo(rightVal); break;
+      case '!=': value = !leftVal.equalsTo(rightVal); break;
       default:
     }
 
@@ -229,9 +232,10 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitVarStmt(VarStmt stmt) {
-    Value value = new Value(stmt.type, null);
+    Value value = stmt.type is CustomType ? new NullValue() : new Value(stmt.type, null);
     if (stmt.initializer != null) {
       value = _evaluate(stmt.initializer);
+      value.initialized = true;
     }
 
     _env.define(stmt.name.lexeme, value);
@@ -266,14 +270,19 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitIndexExpr(IndexExpr expr) {
-    ArrayValue owner = _evaluate(expr.owner);
-    int index = _evaluate(expr.index).value as int;
+    Value owner = _evaluate(expr.owner);
 
-    if (index < 0 || index >= owner.size) {
+    if (!owner.initialized) {
+      throw new RuntimeError(expr.bracket, "Cannot subscript uninitialized array.");
+    }
+
+    int index = _evaluate(expr.index).value as int;
+    ArrayValue array = owner as ArrayValue;
+    if (index < 0 || index >= array.size) {
       throw new RuntimeError(expr.bracket, "Array index out of bounds.");
     }
     
-    return owner.get(index); 
+    return array.get(index); 
   }
 
   @override
@@ -300,8 +309,14 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   @override
   visitAccessExpr(AccessExpr expr) {
     Value instance = _evaluate(expr.object);
+    String field = (expr.field as VariableExpr).name.lexeme;
+
+    if (instance.equalsTo(new NullValue())) {
+      throw new RuntimeError(expr.dot, "Cannot access '$field' on null value.");
+    }
+
     if (instance is DecafInstance) {
-      return instance.getField((expr.field as VariableExpr).name.lexeme);
+      return instance.getField(field);
     } else return instance;
   }
 

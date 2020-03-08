@@ -7,6 +7,7 @@ import 'interpreter.dart';
 class Value {
   Object value;
   Type type;
+  bool initialized = false;
 
   Value(this.type, [this.value]);
 
@@ -15,6 +16,10 @@ class Value {
     return (type.name == BuiltinType.INT.name) 
       ? (value as num)?.toInt().toString()
       : value.toString();
+  }
+
+  bool equalsTo(Value value) {
+    return this.type.name == value.type.name && this.value == value.value; 
   }
 }
 
@@ -37,6 +42,11 @@ class ArrayValue extends Value {
 
   Value get(int index) {
     return values[index];
+  }
+
+  @override
+  bool equalsTo(Value value) {
+    return this == value;
   }
 
   @override
@@ -79,6 +89,14 @@ class DecafFunction extends DecafCallable {
 
   @override
   Object value;
+
+  @override
+  bool equalsTo(Value value) {
+    return false;
+  }
+
+  @override
+  bool initialized = true;
 }
 
 class DecafClass {
@@ -112,6 +130,14 @@ class DecafInstance implements Value {
 
   @override
   Object value;
+
+  @override
+  bool equalsTo(Value value) {
+    return this == value;
+  }
+
+  @override
+  bool initialized = true;
 }
 
 class Return {
