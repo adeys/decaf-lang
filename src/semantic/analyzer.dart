@@ -2,15 +2,20 @@ import '../ast/expression.dart';
 import '../ast/statement.dart';
 import '../error/error.dart';
 import '../error/error_reporter.dart';
+import '../symbol/scope.dart';
 import '../symbol/symbol.dart';
 import '../types/type.dart';
 import 'scope_owner.dart';
 
 class Analyzer implements StmtVisitor, ExprVisitor {
   ScopeOwner scopes;
+  TypeTable types;
+  ScopeType currentScope =  ScopeType.GLOBAL;
 
   Analyzer(SymbolTable table) {
     scopes = new ScopeOwner(table);
+    types = table.types;
+
     /*for (int i = 0; i < table.scopes.length; i++) {
       print( "$i -> ${table.scopes[i]} -> ${table.scopes[i].enclosing}");
     }*/
@@ -50,6 +55,16 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       }
   }
 
+  void checkExistence(Type type, int line) {
+    if (!types.hasType(type)) {
+      while (type is ArrayType) {
+        type = (type as ArrayType).base;
+      }
+
+      ErrorReporter.report(new TypeError(line, "No declaration for class '$type' found"));
+    }
+  }
+
   @override
   visitAssignExpr(AssignExpr expr) {
     if (expr.target is VariableExpr) {
@@ -57,7 +72,10 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       checkAssignment(target.type, resolveType(expr.value), expr.op.line);
     } else if (expr.target is IndexExpr) {
       IndexExpr target = expr.target as IndexExpr;
-      checkAssignment(resolveType(target.owner), resolveType(expr.value), expr.op.line);
+      checkAssignment((resolveType(target.owner) as ArrayType).base, resolveType(expr.value), expr.op.line);
+    } else if (expr.target is AccessExpr) {
+      AccessExpr target = expr.target as AccessExpr;
+      checkAssignment(resolveType(target), resolveType(expr.value), expr.op.line);
     }
   }
 
@@ -75,7 +93,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     }
 
     Type ret = left;
-    if (!_isNum(left) || _isNum(right) || !left.isCompatible(right)) {
+    if (!_isNum(left) || !_isNum(right) || !left.isCompatible(right)) {
       ErrorReporter.report(new TypeError(expr.op.line, "Incompatible operands: $left ${expr.op.lexeme} $right."));
       ret = BuiltinType.ERROR;
     }
@@ -129,18 +147,39 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitCallExpr(CallExpr expr) {
-    VariableExpr callee = expr.callee as VariableExpr;
-    Symbol sym = scopes.getSymbol(callee.name.lexeme);
-    if (sym.type is! FunctionType) {
-      ErrorReporter.report(new TypeError(expr.paren.line, "No declaration for function '${callee.name.lexeme}' found."));
+    Type type;
+    String name = '';
+    String kind = 'Function';
+    
+    if (expr.callee is VariableExpr) {
+      VariableExpr callee = expr.callee as VariableExpr;
+      Symbol sym = scopes.getSymbol(callee.name.lexeme);
+      type = sym.type;
+      name = callee.name.lexeme;
+    } else if (expr.callee is AccessExpr) {
+      kind = 'Method';
+      name = ((expr.callee as AccessExpr).field as VariableExpr).name.lexeme;
+      type = resolveType(expr.callee);
+    } else {
+      type = resolveType(expr.callee);
+      ErrorReporter.report(new TypeError(expr.paren.line, "'$type' is not callable."));
       return BuiltinType.ERROR;
     }
 
-    FunctionType func = sym.type as FunctionType;
+    if (type is ArrayType && name == 'length') {
+      return expr.type = BuiltinType.INT;
+    }
+
+    if (type is! FunctionType) {
+      ErrorReporter.report(new TypeError(expr.paren.line, "No declaration for ${kind.toLowerCase()} '$name' found."));
+      return BuiltinType.ERROR;
+    }
+
+    FunctionType func = type as FunctionType;
 
     if (expr.arguments.length != func.paramsType.length) {
-      ErrorReporter.report(new TypeError(expr.paren.line, "Function ’${callee.name.lexeme}’ expects ${func.paramsType.length} arguments but ${expr.arguments.length} given."));
-      return BuiltinType.ERROR;
+      ErrorReporter.report(new TypeError(expr.paren.line, "${kind} ’$name’ expects ${func.paramsType.length} arguments but ${expr.arguments.length} given."));
+      return expr.type = func.returnType;
     }
 
     int line = expr.paren.line;
@@ -170,6 +209,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitFunctionStmt(FunctionStmt stmt) {
+    checkExistence(stmt.returnType, stmt.name.line);
+
     Symbol symbol = scopes.fromCurrent(stmt.name.lexeme);
 
     enterScope();
@@ -238,7 +279,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     Type returnType = stmt.value != null ? resolveType(stmt.value) : BuiltinType.VOID;
 
     if (BuiltinType.VOID.isCompatible(stmt.expectedType) && returnType.name != BuiltinType.VOID.name) {
-      ErrorReporter.report(new TypeError(stmt.keyword.line, "Cannot return a non null value from a void-return function."));
+      ErrorReporter.report(new TypeError(stmt.keyword.line, "Incompatible return: $returnType given, void expected."));
       return;
     }
     
@@ -270,6 +311,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   @override
   visitVarStmt(VarStmt stmt) {
     Symbol symbol = scopes.fromCurrent(stmt.name.lexeme);
+
+    checkExistence(symbol.type, stmt.name.line);
 
     if (stmt.initializer != null) {
       Type type = resolveType(stmt.initializer);
@@ -312,5 +355,73 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     }
 
     return type.name == BuiltinType.ERROR.name ? type : (type as ArrayType).base;
+  }
+
+  @override
+  visitClassStmt(ClassStmt stmt) {
+    enterScope();
+    currentScope = ScopeType.CLASS;
+
+    for (VarStmt field in stmt.fields) {
+      resolve(field);
+    }
+
+    for (FunctionStmt method in stmt.methods) {
+      resolve(method);
+    }
+
+    exitScope();
+    currentScope = ScopeType.GLOBAL;
+  }
+
+  @override
+  visitAccessExpr(AccessExpr expr) {
+    Type type = resolveType(expr.object);
+    String field = (expr.field as VariableExpr).name.lexeme;
+
+    if (type is ArrayType && field == 'length') {
+      return type;
+    }
+
+    if (type is! CustomType) {
+      ErrorReporter.report(new TypeError(expr.dot.line, "$type has no such field '$field'."));
+      return;
+    }
+
+    CustomType target = types.getType(type);
+
+    // Check wether the class has the field
+    if (target.scope.has(field)) {
+      type = target.scope.getSymbol(field).type;
+      if (type is! FunctionType && currentScope != ScopeType.CLASS) {
+        ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' only accessible within class scope."));
+      }
+
+      return type;
+    } else {
+      ErrorReporter.report(new TypeError(expr.dot.line, "$target has no such field '$field'."));
+      return BuiltinType.NULL;
+    }
+  }
+
+  @override
+  visitThisExpr(ThisExpr expr) {
+    return expr.type;
+  }
+
+  @override
+  visitNewExpr(NewExpr expr) {
+    if (!types.hasType(expr.type)) {
+      ErrorReporter.report(new TypeError(expr.keyword.line, "No declaration for class ’${expr.type}’ found."));
+      expr.type = BuiltinType.NULL;
+      return;
+    }
+
+    return expr.type;
+  }
+
+  @override
+  visitReadExpr(ReadExpr expr) {
+    return expr.type;
   }
 }

@@ -3,7 +3,8 @@ import 'symbol.dart';
 enum ScopeType {
   GLOBAL,
   FORMALS,
-  BLOCK
+  BLOCK,
+  CLASS
 }
 
 class Scope {

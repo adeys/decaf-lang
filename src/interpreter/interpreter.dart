@@ -15,9 +15,10 @@ class Break {
 class Interpreter implements StmtVisitor, ExprVisitor {
   SymbolTable symbols;
   Environment _env;
+  Environment _globals = new Environment();
 
   Interpreter(this.symbols) {
-    _env = new Environment();
+    _env = _globals;
   }
 
   Value evaluate(List<Stmt> ast) {
@@ -33,7 +34,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     }
 
     // Execute the main function
-    return (_env.getAt(0, 'main') as DecafFunction).callFun(this, []);
+    return (_globals.getAt(0, 'main') as DecafFunction).callFun(this, []);
   }
 
   Value _execute(Stmt stmt) {
@@ -67,8 +68,13 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       }
       
       array.set(index, value);
+    } else if (expr.target is AccessExpr) {
+      AccessExpr target = expr.target as AccessExpr;
+      DecafInstance instance = _evaluate(target.object);
+      VariableExpr field = target.field as VariableExpr;
+      
+      instance.setField(field.name, _evaluate(expr.value));
     }
-
   }
 
   @override
@@ -110,7 +116,6 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       for (Stmt stmt in statements) {
         _execute(stmt);
       }
-    } on Break catch(_) {
     } finally {
       _env = old;
     }
@@ -128,11 +133,15 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitCallExpr(CallExpr expr) {
-    DecafCallable callable = _evaluate(expr.callee);
+    Value callable = _evaluate(expr.callee);
 
-    List<Value> args = expr.arguments.map((Expr expr) => _evaluate(expr)).toList();
+    if (callable is DecafCallable) {
+      List<Value> args = expr.arguments.map((Expr expr) => _evaluate(expr)).toList();
 
-    return callable.callFun(this, args);
+      return callable.callFun(this, args);
+    } else if (callable is ArrayValue) {
+      return new Value(BuiltinType.INT, callable.size);
+    }
   }
 
   @override
@@ -144,8 +153,12 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   visitForStmt(ForStmt stmt) {
     if (stmt.initializer != null) _evaluate(stmt.initializer);
     while (_evaluate(stmt.condition).value == true) {
-      _execute(stmt.body);
-      if (stmt.incrementer != null) _evaluate(stmt.incrementer);
+      try {
+        _execute(stmt.body);
+        if (stmt.incrementer != null) _evaluate(stmt.incrementer);
+      } on Break catch(_) {
+        return;
+      }
     }
   }
 
@@ -205,7 +218,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   visitUnaryExpr(UnaryExpr expr) {
     Value result = _evaluate(expr.expression);
     if (expr.op.lexeme == '!') {
-      result.value = !result.value;
+      result.value = !(result.value as bool);
     } else {
       result.value = -(result.value as num);
     }
@@ -216,8 +229,10 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitVarStmt(VarStmt stmt) {
-    Value value = new Value(stmt.type);
-    value.value = stmt.initializer != null ? _evaluate(stmt.initializer).value : null;
+    Value value = new Value(stmt.type, null);
+    if (stmt.initializer != null) {
+      value = _evaluate(stmt.initializer);
+    }
 
     _env.define(stmt.name.lexeme, value);
   }
@@ -230,7 +245,11 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   @override
   visitWhileStmt(WhileStmt stmt) {
     while (_evaluate(stmt.condition).value == true) {
-      _execute(stmt.body);
+      try {
+        _execute(stmt.body);
+      } on Break catch(_) {
+        return;
+      }
     }
   }
 
@@ -255,6 +274,58 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     }
     
     return owner.get(index); 
+  }
+
+  @override
+  visitClassStmt(ClassStmt stmt) {
+    DecafClass klass = new DecafClass(stmt.name.lexeme);
+    _env.define(stmt.name.lexeme, klass);
+
+    _env = new Environment(_env);
+
+    for (VarStmt field in stmt.fields) {
+      _execute(field);
+    }
+
+    for (FunctionStmt method in stmt.methods) {
+      _execute(method);
+    }
+
+    klass.scope = _env;
+    
+    _env = _env.parent;
+    _env.assign(stmt.name, klass);
+  }
+
+  @override
+  visitAccessExpr(AccessExpr expr) {
+    Value instance = _evaluate(expr.object);
+    if (instance is DecafInstance) {
+      return instance.getField((expr.field as VariableExpr).name.lexeme);
+    } else return instance;
+  }
+
+  @override
+  visitThisExpr(ThisExpr expr) {
+    return _env.getAt(2, 'this');
+  }
+
+  @override
+  visitNewExpr(NewExpr expr) {
+    DecafClass klass = _globals.getAt(0, expr.type.name);
+    
+    return new DecafInstance(expr.type, klass);
+  }
+
+  @override
+  visitReadExpr(ReadExpr expr) {
+    String input = stdin.readLineSync();
+
+    return new Value(
+      expr.type, 
+      BuiltinType.INT.isCompatible(expr.type) 
+        ? (int.tryParse(input) ?? 0)
+        : input);
   }
   
 }

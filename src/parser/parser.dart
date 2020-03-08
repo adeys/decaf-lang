@@ -28,10 +28,7 @@ class Parser {
 
     PrefixRule literal = new PrefixRule(Precedence.NONE, _getPrimary);
     PrefixRule unary = new PrefixRule(Precedence.UNARY, _getUnary);
-
-    //InfixRule dot = new InfixRule(Precedence.CALL, null, _getDot);
     
-    InfixRule assign = new InfixRule(Precedence.ASSIGNMENT, null, _getAssignment);
     InfixRule equality = new InfixRule(Precedence.EQUALITY);
     InfixRule comparison = new InfixRule(Precedence.COMPARISON);
     InfixRule sum = new InfixRule(Precedence.SUM);
@@ -46,6 +43,7 @@ class Parser {
       TokenType.DOUBLE: literal,
       TokenType.INTEGER: literal,
       TokenType.IDENTIFIER: literal,
+      TokenType.THIS: literal,
 
       // Unary
       TokenType.BANG: unary,
@@ -54,10 +52,10 @@ class Parser {
       TokenType.LEFT_BRACKET: new InfixRule(Precedence.CALL, null, _getIndex),
       TokenType.LEFT_PAREN: new InfixRule(Precedence.CALL, _getGroupingExpr, _getCall),
       TokenType.ARRAY: new PrefixRule(Precedence.NONE, _getArrayExpr),
-      //TokenType.DOT: dot,
+      TokenType.DOT: new InfixRule(Precedence.CALL, null, _getDot),
 
       // Binary
-      TokenType.EQUAL: assign,
+      TokenType.EQUAL: new InfixRule(Precedence.ASSIGNMENT, null, _getAssignment),
       TokenType.EQUAL_EQUAL: equality,
       TokenType.BANG_EQUAL: equality,
 
@@ -89,22 +87,43 @@ class Parser {
 
   Stmt _getDeclaration() {
     try {
-      int index = offset;
-      Type type = _match([TokenType.KW_VOID]) ? BuiltinType.VOID : _expectType();
-      Token name = _expect(TokenType.IDENTIFIER, 'Expect variable name after type.');
-      
-      if (type.name == BuiltinType.VOID.name || _check(TokenType.LEFT_PAREN)) {
-        _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");
-        return _getFuncDeclaration(type, name);
-      }
+      if (_match([TokenType.CLASS])) return _getClassDeclaration();
 
-      offset = index;
-      return _getVarDeclaration();
+      return _getFieldDeclaration();
     } on ParseError catch (e) {
       ErrorReporter.report(e);
       _synchronize();
       return null;
     }
+  }
+
+  Stmt _getFieldDeclaration() {
+    int index = offset;
+    Type type = _match([TokenType.KW_VOID]) ? BuiltinType.VOID : _expectType();
+    Token name = _expect(TokenType.IDENTIFIER, 'Expect variable name after type.');
+    
+    if (type.name == BuiltinType.VOID.name || _check(TokenType.LEFT_PAREN)) {
+      _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");
+      return _getFuncDeclaration(type, name);
+    }
+
+    offset = index;
+    return _getVarDeclaration();
+  }
+
+  ClassStmt _getClassDeclaration() {
+    Token name = _expect(TokenType.IDENTIFIER, "Expect class name.");
+
+    List<VarStmt> fields = [];
+    List<FunctionStmt> methods = [];
+    _expect(TokenType.LEFT_BRACE, "Expect '{' before class declaration body.");
+    while (!_check(TokenType.RIGHT_BRACE)) {
+      Stmt field = _getFieldDeclaration();
+      (field is VarStmt ? fields : methods).add(field);
+    }
+    _expect(TokenType.RIGHT_BRACE, "Expect '}' at class declaration end.");
+
+    return new ClassStmt(name, fields, methods);
   }
 
   VarStmt _getVariable() {
@@ -250,7 +269,7 @@ class Parser {
     List<Stmt> statements = [];
 
     while (!_check(TokenType.RIGHT_BRACE)) {
-      statements.add(_types.contains(_peek().type) ? _getVarDeclaration() : _getStatement());
+      statements.add(_matchType() ? _getVarDeclaration() : _getStatement());
     }
 
     _expect(TokenType.RIGHT_BRACE, "Expect '}' at block end.");
@@ -260,14 +279,37 @@ class Parser {
 
   ExpressionStmt _getExpressionStmt() {
     Expr expr = _getExpression();
-    _expect(TokenType.SEMICOLON, "Unexpected '${_peek().lexeme}'. Expect ';' after expression.");
+    _expect(TokenType.SEMICOLON, "Expect ';' after expression.");
 
     return new ExpressionStmt(expr);
   }
 
   // Expressions parsing
   Expr _getExpression() {
+    if (_match([TokenType.NEW])) return _getNewExpr();
+    if (_match([TokenType.RD_INT, TokenType.RD_LINE])) return _getReadExpr();
+
     return _parsePrecedence(Precedence.NONE);
+  }
+
+  NewExpr _getNewExpr() {
+    Token keyword = _previous;
+
+    _expect(TokenType.LEFT_PAREN, "Expect '(' after 'new'.");
+    Type type = _expectType(false);
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after new expression.");
+
+    return new NewExpr(keyword, type);
+  }
+
+  ReadExpr _getReadExpr() {
+    Token keyword = _previous;
+    String name = keyword.type == TokenType.RD_INT ? 'readInt' : 'readLine';
+
+    _expect(TokenType.LEFT_PAREN, "Expect '(' after '$name'.");
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after $name expression.");
+
+    return new ReadExpr(keyword, keyword.type == TokenType.RD_INT ? BuiltinType.INT : BuiltinType.STRING);
   }
 
   Expr _parsePrecedence(int precedence, [bool assoc = true]) {
@@ -329,18 +371,25 @@ class Parser {
     _expect(TokenType.LEFT_PAREN, "Expect '(' after 'array'.");
     Expr size = _getExpression();
     _expect(TokenType.COMMA, "Expect ',' after array size.");
-    Type type = _expectType();
+    Type type = _expectType(false);
     _expect(TokenType.RIGHT_PAREN, "Expect ')' after 'array' expression.");
 
     return new ArrayExpr(keyword, type, size);
   }
 
+  AccessExpr _getDot(Expr target, int precedence) {
+    Token dot = _previous;
+    Expr field = _parsePrecedence(Precedence.CALL * 2);
+
+    return new AccessExpr(dot, target, field);
+  }
+
   AssignExpr _getAssignment(Expr left, int _) {
-    if (left is! VariableExpr && left is! IndexExpr) 
+    if (left is! VariableExpr && left is! IndexExpr && left is! AccessExpr) 
       throw new ParseError(_previous, "Invalid assignment target.");
 
     Token keyword = _previous;
-    Expr value = _parsePrecedence(Precedence.ASSIGNMENT);
+    Expr value = _getExpression();//_parsePrecedence(Precedence.ASSIGNMENT);
 
     return new AssignExpr(keyword, left, value);
   }
@@ -376,8 +425,9 @@ class Parser {
       if (_match([TokenType.DOUBLE])) return new LiteralExpr(BuiltinType.DOUBLE, _previous.value);
       if (_match([TokenType.STRING])) return new LiteralExpr(BuiltinType.STRING, _previous.value);
       if (_match([TokenType.IDENTIFIER])) return new VariableExpr(_previous);
+      if (_match([TokenType.THIS])) return new ThisExpr(_previous);
       
-      throw new ParseError(_peek(), "Unexpected '${_peek().lexeme}' Expected constant or variable expression.");
+      throw new ParseError(_peek(), "Expected constant or variable expression.");
   }
 
   // Parsing functions
@@ -434,11 +484,34 @@ class Parser {
     return false;
   }
 
-  bool _matchType() {
+  bool _matchType([bool declare = true]) {
+    // Match cases: `Class name` and `Class[]` 
+    if (_check(TokenType.IDENTIFIER)) {
+      // Trick to match a single identifier as a type name
+      if (!declare) return true;
+      
+      if (_checkNext(TokenType.IDENTIFIER)) {
+        return true;
+      } else if (_checkNext(TokenType.LEFT_BRACKET)) {
+        _advance();
+        if (_checkNext(TokenType.RIGHT_BRACKET)) {
+          offset--;
+          return true;
+        }
+        offset--;
+        return false;
+      }
+      return false;
+    }
+
     if (_match(_types)) {
+      // Rollback offset
+      offset--;
+      
       if (_check(TokenType.LEFT_BRACKET) && _checkNext(TokenType.RIGHT_BRACKET)) {
         return true;
       }
+
       return true;
     }
 
@@ -453,12 +526,16 @@ class Parser {
     throw new ParseError(_peek(), errMsg);
   }
 
-  Type _expectType() {
-    if (!_matchType()) {
+  Type _expectType([bool declare = true]) {
+    if (!_matchType(declare)) {
       throw new ParseError(_peek(), 'Expected type expression.');
     }
 
+    _advance();
     Type type = typeMap[_previous.type];
+    if (type == null) {
+      type = new CustomType(_previous.lexeme);
+    }
 
     while (_match([TokenType.LEFT_BRACKET])) {
       _expect(TokenType.RIGHT_BRACKET, "Expected ']' after '[' in type declaration.");

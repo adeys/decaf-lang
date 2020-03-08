@@ -1,4 +1,5 @@
 import '../ast/statement.dart';
+import '../lexer/tokens.dart';
 import '../types/type.dart';
 import 'environmnent.dart';
 import 'interpreter.dart';
@@ -71,6 +72,39 @@ class DecafFunction extends DecafCallable {
     }
 
     return result;
+  }
+
+  @override
+  Type type;
+
+  @override
+  Object value;
+}
+
+class DecafClass {
+  String name;
+  Environment scope;
+
+  DecafClass(this.name, [this.scope]);
+}
+
+class DecafInstance implements Value {
+  DecafClass _class;
+
+  DecafInstance(this.type, this._class);
+
+  Value getField(String name) {
+    Value field = _class.scope.getAt(0, name);
+    
+    if (field is DecafFunction) {
+      field.enclosing.define('this', this);
+    }
+
+    return field;
+  }
+
+  void setField(Token name, Value value) {
+    _class.scope.assignAt(0, name, value);
   }
 
   @override

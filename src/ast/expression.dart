@@ -64,6 +64,64 @@ class IndexExpr implements Expr {
   
 }
 
+class AccessExpr implements Expr {
+  @override
+  Type type;
+  Token dot;
+  Expr object;
+  Expr field;
+
+  AccessExpr(this.dot, this.object, this.field);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitAccessExpr(this);
+  }
+
+}
+
+class ThisExpr implements Expr {
+  @override
+  Type type;
+  Token keyword;
+
+  ThisExpr(this.keyword);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitThisExpr(this);
+  }
+  
+}
+
+class NewExpr implements Expr {
+  @override
+  Type type;
+  Token keyword;
+
+  NewExpr(this.keyword, this.type);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitNewExpr(this);
+  }
+  
+}
+
+class ReadExpr implements Expr {
+  @override
+  Type type;
+  Token keyword;
+
+  ReadExpr(this.keyword, this.type);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitReadExpr(this);
+  }
+  
+}
+
 class GroupingExpr implements Expr {
   Expr expression;
 
@@ -160,6 +218,10 @@ class CallExpr implements Expr {
 
 abstract class ExprVisitor {
 
+  visitAccessExpr(AccessExpr expr) {
+    return expr.accept(this);
+  }
+
   visitArrayExpr(ArrayExpr expr) {
     return expr.accept(this);
   }
@@ -191,6 +253,18 @@ abstract class ExprVisitor {
 	visitLogicalExpr(LogicalExpr expr) {
 		return expr.accept(this);
 	}
+
+  visitNewExpr(NewExpr expr) {
+    return expr.accept(this);
+  }
+
+  visitReadExpr(ReadExpr expr) {
+    return expr.accept(this);
+  }
+
+  visitThisExpr(ThisExpr expr) {
+    return expr.accept(this);
+  }
 
 	visitUnaryExpr(UnaryExpr expr) {
 		return expr.accept(this);

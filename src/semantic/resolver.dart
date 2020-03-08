@@ -22,6 +22,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
   ScopeKind scope = ScopeKind.GLOBAL;
   FunctionStmt currentFunc;
   LoopScope loop = LoopScope.NONE;
+  Symbol currentClass = null;
   List<int> scopes = [];
 
   Resolver(this.symbols) {
@@ -46,14 +47,11 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
   void declare(Stmt stmt) {
     Token name;
-    if (stmt is VarStmt) {
-      name = stmt.name;
-    } else if (stmt is FunctionStmt) {
-      name = stmt.name;
-    }
+    
+    name = (stmt as DeclStmt).name;
 
     if (symbols.inScope(name.lexeme)) {
-      ErrorReporter.report(new SemanticError(name, "Name '${name.lexeme}' has already been declared in this scope."));
+      ErrorReporter.report(new SemanticError(name, "Declaration of '${name.lexeme}' here conflicts with previous declaration."));
     }
     
     symbols.addSymbol(new Symbol(name.lexeme));
@@ -208,7 +206,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitVariableExpr(VariableExpr expr) {
     if (!symbols.hasSymbol(expr.name.lexeme)) {
-      ErrorReporter.report(new SemanticError(expr.name, "Variable '${expr.name.lexeme}' has never been declared."));
+      ErrorReporter.report(new SemanticError(expr.name, "No declaration for '${expr.name.lexeme}' found."));
     }
   }
 
@@ -232,6 +230,72 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitIndexExpr(IndexExpr expr) {
     _resolve(expr.owner);
     _resolve(expr.index);
+  }
+
+  @override
+  visitClassStmt(ClassStmt stmt) {
+    String name = stmt.name.lexeme;
+    CustomType type = new CustomType(name);
+    Symbol symbol = new Symbol(name, type);
+    
+    currentClass = symbol;
+    symbols.setSymbol(name, symbol);
+    symbols.registerType(type);
+
+    symbols.beginScope(ScopeType.CLASS);
+    // Declare all fields in current scope
+    for (VarStmt field in stmt.fields) {
+      declare(field);
+    }
+
+    // Then declare all methods
+    for (FunctionStmt method in stmt.methods) {
+      declare(method);
+    }
+
+    // Now resolve fields
+    for (VarStmt field in stmt.fields) {
+      _resolve(field);
+    }
+
+    for (FunctionStmt method in stmt.methods) {
+      _resolve(method);
+    }
+
+    type.scope = symbols.current;
+    symbols.endScope();
+
+    currentClass = null;
+  }
+
+  @override
+  visitAccessExpr(AccessExpr expr) {
+    _resolve(expr.object);
+  }
+
+  @override
+  visitThisExpr(ThisExpr expr) {
+    if (currentClass == null) {
+      ErrorReporter.report(new SemanticError(expr.keyword, "’this’ is only valid within class scope."));
+      expr.type = BuiltinType.NULL;
+      return;
+    }
+    
+    expr.type = currentClass.type;
+  }
+
+  @override
+  visitNewExpr(NewExpr expr) {
+    if (expr.type is! CustomType) {
+      ErrorReporter.report(new TypeError(expr.keyword.line, "’${expr.type}’ is not a class."));
+      expr.type = BuiltinType.NULL;
+      return;
+    }
+  }
+
+  @override
+  visitReadExpr(ReadExpr expr) {
+    return null;
   }
 
 }
