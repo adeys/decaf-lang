@@ -133,6 +133,10 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     symbols.beginScope(ScopeType.FORMALS);
     for (VarStmt param in stmt.params) {
+      declare(param);
+    }
+    
+    for (VarStmt param in stmt.params) {
       _resolve(param);
     }
     

@@ -79,8 +79,11 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitBinaryExpr(BinaryExpr expr) {
-    Object left = _evaluate(expr.left).value;
-    Object right = _evaluate(expr.right).value;
+    Value leftVal = _evaluate(expr.left);
+    Value rightVal = _evaluate(expr.right);
+
+    Object left = leftVal.value;
+    Object right = rightVal.value;
 
     Object value;
 
@@ -100,8 +103,8 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       case '<=': value = (left as num) <= (right as num); break;
       case '>': value = (left as num) > (right as num); break;
       case '>=': value = (left as num) >= (right as num); break;
-      case '==': value = left == right; break;
-      case '!=': value = left != right; break;
+      case '==': value = leftVal.equalsTo(rightVal); break;
+      case '!=': value = !leftVal.equalsTo(rightVal); break;
       default:
     }
 
