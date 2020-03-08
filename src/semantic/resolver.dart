@@ -55,6 +55,9 @@ class Resolver implements StmtVisitor, ExprVisitor {
     }
     
     symbols.addSymbol(new Symbol(name.lexeme));
+    if (stmt is ClassStmt) {
+      symbols.registerType(new CustomType(stmt.name.lexeme));
+    }
   }
 
   void _resolve(dynamic node) {
@@ -194,13 +197,17 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitVarStmt(VarStmt stmt) {
     String name = stmt.name.lexeme;
 
+    if (symbols.typeExists(name)) {
+      ErrorReporter.report(new SemanticError(stmt.name, "Cannot use class name $name as object instance name."));
+    }
+
     Symbol symbol = new Symbol(name);
     if (stmt.initializer != null) {
       _resolve(stmt.initializer);
     }
 
-      symbol.type = stmt.type;
-      symbols.setSymbol(name, symbol);
+    symbol.type = stmt.type;
+    symbols.setSymbol(name, symbol);
   }
 
   @override
@@ -240,7 +247,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     
     currentClass = symbol;
     symbols.setSymbol(name, symbol);
-    symbols.registerType(type);
+    symbols.updateType(type);
 
     symbols.beginScope(ScopeType.CLASS);
     // Declare all fields in current scope

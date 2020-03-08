@@ -52,6 +52,13 @@ class SymbolTable {
     types.addType(type);
   }
 
+  void updateType(Type type) {
+    types.setType(type.name, type);
+  }
+
+  bool typeExists(String name) {
+    return types.hasNamedType(name);
+  }
 /*
   Symbol getSymbol(String symbol) {
     return current.getSymbol(symbol);
