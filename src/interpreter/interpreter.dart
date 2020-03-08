@@ -290,23 +290,33 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     DecafClass klass = new DecafClass(stmt.name.lexeme);
     _env.define(stmt.name.lexeme, klass);
 
+    DecafClass parent;
+    
+    if (stmt.parent != null) {
+      parent = _globals.getAt(0, stmt.parent.lexeme);
+    }
+
     _env = new Environment(_env);
 
+    Map<String, Value> fields = {};
     for (VarStmt field in stmt.fields) {
       _execute(field);
+      String name = field.name.lexeme;
+      fields[name] = _env.getAt(0, name);
     }
 
+    Map<String, DecafFunction> methods = {};
     for (FunctionStmt method in stmt.methods) {
       _execute(method);
+      String name = method.name.lexeme;
+      methods[name] = _env.getAt(0, name);
     }
 
-    klass.scope = _env;
     _env = _env.parent;
 
-    if (stmt.parent != null) {
-      klass.hasParent = true;
-      klass.scope.parent = (_globals.getAt(0, stmt.parent.lexeme) as DecafClass).scope;
-    }
+    klass.fields = fields;
+    klass.methods = methods;
+    klass.parent = parent;
     
     _env.assign(stmt.name, klass);
   }

@@ -102,10 +102,22 @@ class DecafFunction extends DecafCallable {
 
 class DecafClass {
   String name;
+  Map<String, Value> fields = {};
+  Map<String, DecafFunction> methods = {};
   Environment scope;
-  bool hasParent = false;
+  DecafClass parent;
 
-  DecafClass(this.name, [this.scope]);
+  DecafClass(this.name, [this.fields, this.methods, this.scope]);
+
+  Value getField(String name) {
+    Value field = fields[name] ?? methods[name];
+
+    if (field == null && parent != null) {
+      return parent.getField(name);
+    }
+
+    return field;
+  }
 }
 
 class DecafInstance implements Value {
@@ -114,11 +126,7 @@ class DecafInstance implements Value {
   DecafInstance(this.type, this._class);
 
   Value getField(String name) {
-    Value field = _class.scope.getAt(0, name);
-    
-    if (field == null && _class.hasParent) {
-      return _class.scope.getAt(1, name);
-    }
+    Value field = _class.getField(name);
 
     if (field is DecafFunction) {
       field.enclosing.define('this', this);

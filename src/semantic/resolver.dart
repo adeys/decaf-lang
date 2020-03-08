@@ -71,7 +71,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     if (expr.target is VariableExpr) {
       String target = (expr.target as VariableExpr).name.lexeme;
-      symbols.getSymbol(target).initialized = true;
+      symbols.getSymbol(target)?.initialized = true;
     }
   }
 
