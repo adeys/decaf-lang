@@ -293,4 +293,9 @@ class Resolver implements StmtVisitor, ExprVisitor {
     }
   }
 
+  @override
+  visitReadExpr(ReadExpr expr) {
+    return null;
+  }
+
 }

@@ -287,6 +287,7 @@ class Parser {
   // Expressions parsing
   Expr _getExpression() {
     if (_match([TokenType.NEW])) return _getNewExpr();
+    if (_match([TokenType.RD_INT, TokenType.RD_LINE])) return _getReadExpr();
 
     return _parsePrecedence(Precedence.NONE);
   }
@@ -299,6 +300,16 @@ class Parser {
     _expect(TokenType.RIGHT_PAREN, "Expect ')' after new expression.");
 
     return new NewExpr(keyword, type);
+  }
+
+  ReadExpr _getReadExpr() {
+    Token keyword = _previous;
+    String name = keyword.type == TokenType.RD_INT ? 'readInt' : 'readLine';
+
+    _expect(TokenType.LEFT_PAREN, "Expect '(' after '$name'.");
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after $name expression.");
+
+    return new ReadExpr(keyword, keyword.type == TokenType.RD_INT ? BuiltinType.INT : BuiltinType.STRING);
   }
 
   Expr _parsePrecedence(int precedence, [bool assoc = true]) {
@@ -378,7 +389,7 @@ class Parser {
       throw new ParseError(_previous, "Invalid assignment target.");
 
     Token keyword = _previous;
-    Expr value = _parsePrecedence(Precedence.ASSIGNMENT);
+    Expr value = _getExpression();//_parsePrecedence(Precedence.ASSIGNMENT);
 
     return new AssignExpr(keyword, left, value);
   }

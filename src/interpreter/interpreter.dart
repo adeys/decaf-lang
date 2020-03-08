@@ -214,7 +214,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   visitUnaryExpr(UnaryExpr expr) {
     Value result = _evaluate(expr.expression);
     if (expr.op.lexeme == '!') {
-      result.value = !result.value;
+      result.value = !(result.value as bool);
     } else {
       result.value = -(result.value as num);
     }
@@ -310,6 +310,17 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     DecafClass klass = _globals.getAt(0, expr.type.name);
     
     return new DecafInstance(expr.type, klass);
+  }
+
+  @override
+  visitReadExpr(ReadExpr expr) {
+    String input = stdin.readLineSync();
+
+    return new Value(
+      expr.type, 
+      BuiltinType.INT.isCompatible(expr.type) 
+        ? (int.tryParse(input) ?? 0)
+        : input);
   }
   
 }

@@ -34,8 +34,8 @@ class Lexer {
     "new": TokenType.NEW,
     "array": TokenType.ARRAY,
     "print": TokenType.PRINT,
-    //"readInt": TokenType.RD_INT,
-    //"readLine": TokenType.RD_LINE,
+    "readInt": TokenType.RD_INT,
+    "readLine": TokenType.RD_LINE,
   };
 
   Lexer(this.source);

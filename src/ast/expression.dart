@@ -108,6 +108,20 @@ class NewExpr implements Expr {
   
 }
 
+class ReadExpr implements Expr {
+  @override
+  Type type;
+  Token keyword;
+
+  ReadExpr(this.keyword, this.type);
+
+  @override
+  Object accept(ExprVisitor visitor) {
+    return visitor.visitReadExpr(this);
+  }
+  
+}
+
 class GroupingExpr implements Expr {
   Expr expression;
 
@@ -241,6 +255,10 @@ abstract class ExprVisitor {
 	}
 
   visitNewExpr(NewExpr expr) {
+    return expr.accept(this);
+  }
+
+  visitReadExpr(ReadExpr expr) {
     return expr.accept(this);
   }
 

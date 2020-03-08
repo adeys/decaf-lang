@@ -410,4 +410,9 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
     return expr.type;
   }
+
+  @override
+  visitReadExpr(ReadExpr expr) {
+    return expr.type;
+  }
 }
