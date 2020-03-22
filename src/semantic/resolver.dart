@@ -263,7 +263,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     
     currentClass = symbol;
     symbols.setSymbol(name, symbol);
-    Scope parent = symbols.scopes[0];
+    Scope parent;
 
     // Check parent class
     if (stmt.parent != null) {
@@ -283,7 +283,14 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     symbols.beginScope(ScopeType.CLASS);
     // Declare all fields in current scope
+    bool hasParent = parent != null; 
+
     for (VarStmt field in stmt.fields) {
+      if (hasParent) {
+        if (parent.has(field.name.lexeme)) {
+          ErrorReporter.report(new SemanticError(stmt.parent, "Cannot override inherited property '${field.name.lexeme}' in class '$name'."));
+        }
+      }
       declare(field);
     }
 
@@ -303,7 +310,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     CustomType type = (symbols.getType(name) as CustomType);
     type.scope = symbols.current;
-    type.scope.enclosing = parent;
+    type.scope.enclosing = parent ?? symbols.scopes[0];
 
     symbols.endScope();
 

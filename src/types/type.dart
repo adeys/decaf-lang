@@ -43,6 +43,21 @@ class FunctionType extends Type {
     return false;
   }
   
+  bool isMethodCompatible(FunctionType type) {
+    // Check params length
+    if (type.paramsType.length != paramsType.length) {
+      return false;
+    }
+
+    for (int i = 0; i < paramsType.length; i++) {
+      if (!(type.paramsType[i].isCompatible(paramsType[i]))) {
+        return false;
+      }
+    }
+
+    return returnType == type.returnType;
+  }
+
   @override
   String toString() {
     return name;

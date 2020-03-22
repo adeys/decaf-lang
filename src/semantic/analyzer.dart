@@ -2,6 +2,7 @@ import '../ast/expression.dart';
 import '../ast/statement.dart';
 import '../error/error.dart';
 import '../error/error_reporter.dart';
+import '../lexer/tokens.dart';
 import '../symbol/scope.dart';
 import '../symbol/symbol.dart';
 import '../types/type.dart';
@@ -371,12 +372,29 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       resolve(field);
     }
 
+    Map<Token, Symbol> syms = {};
     for (FunctionStmt method in stmt.methods) {
       resolve(method);
+      syms[method.name] = scopes.current.getSymbol(method.name.lexeme);
+    }
+
+    if (stmt.parent != null) {
+      _checkOverrides(syms, types.getNamedType(stmt.parent.lexeme));
     }
 
     exitScope();
     currentScope = ScopeType.GLOBAL;
+  }
+
+  void _checkOverrides(Map<Token, Symbol> methods, CustomType parent) {
+    for (Token method in methods.keys) {
+      Type type = parent.scope.getClassSymbol(method.lexeme)?.type;
+      if (type is FunctionType) {
+        if (!type.isMethodCompatible(methods[method].type)) {
+          ErrorReporter.report(new TypeError(method.line, "Overriden method '${method.lexeme}' signature must be compatible with parent's class one"));
+        }
+      }
+    }
   }
 
   @override
