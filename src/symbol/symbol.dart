@@ -20,7 +20,7 @@ class SymbolTable {
   }
 
   void endScope() {
-    current = current.enclosing;
+    current = current.type == ScopeType.CLASS ? scopes[0] : current.enclosing;
   }
 
   void addSymbol(Symbol symbol) {

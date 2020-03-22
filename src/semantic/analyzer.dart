@@ -390,7 +390,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
     if (expr.object is VariableExpr) {
       if (types.hasNamedType((expr.object as VariableExpr).name.lexeme)) {
-        ErrorReporter.report(new TypeError(expr.dot.line, "Cannot get field '$field' on $type."));
+        ErrorReporter.report(new TypeError(expr.dot.line, "Cannot get field '$field' on type $type."));
         return;
       }
     }
@@ -403,8 +403,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     CustomType target = types.getType(type);
 
     // Check wether the class has the field
-    if (target.scope.has(field)) {
-      type = target.scope.getSymbol(field).type;
+    if (target.scope.classHas(field)) {
+      type = target.scope.getClassSymbol(field).type;
       if (type is! FunctionType && currentScope != ScopeType.CLASS) {
         ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' only accessible within class scope."));
       }
@@ -412,7 +412,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       return type;
     } else {
       ErrorReporter.report(new TypeError(expr.dot.line, "$target has no such field '$field'."));
-      return BuiltinType.NULL;
+      return BuiltinType.ERROR;
     }
   }
 

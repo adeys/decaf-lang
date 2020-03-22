@@ -22,8 +22,32 @@ class Scope {
     return symbols.containsKey(symbol);
   }
 
+  bool classHas(String symbol) {
+    Scope current = this; 
+
+    while (current != null) {
+      if (current.has(symbol))
+        return true;
+      current = current.enclosing;
+    }
+
+    return false;
+  }
+
   Symbol getSymbol(String name) {
     return symbols[name];
+  }
+
+  Symbol getClassSymbol(String name) {
+    Scope current = this; 
+
+    while (current != null) {
+      if (current.has(name))
+        return current.getSymbol(name);
+      current = current.enclosing;
+    }
+
+    return null;
   }
 
   @override

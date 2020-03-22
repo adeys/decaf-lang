@@ -74,7 +74,6 @@ class DecafFunction extends DecafCallable {
       env.define(stmt.params[i].name.lexeme, args[i]);
     }
 
-    //print('Called...${stmt.name.lexeme}');
     Value result = new NullValue();
     try {
       interpreter.executeBlock(stmt.body.statements, new Environment(env));      
@@ -109,11 +108,11 @@ class DecafClass {
 
   DecafClass(this.name, [this.fields, this.methods, this.scope]);
 
-  Value getField(String name) {
-    Value field = fields[name] ?? methods[name];
+  Value getMethod(String name) {
+    DecafFunction field = methods[name];
 
     if (field == null && parent != null) {
-      return parent.getField(name);
+      field = parent.getMethod(name);
     }
 
     return field;
@@ -122,11 +121,22 @@ class DecafClass {
 
 class DecafInstance implements Value {
   DecafClass _class;
+  Map<String,Value> fields = {};
 
-  DecafInstance(this.type, this._class);
+  DecafInstance(this.type, this._class) {
+    Value value = new NullValue();
+
+    _class.fields.keys.forEach((String key) {
+      fields[key] = value;
+    });
+  }
 
   Value getField(String name) {
-    Value field = _class.getField(name);
+    if (fields.containsKey(name)) {
+      return fields[name];
+    }
+
+    Value field = _class.getMethod(name);
 
     if (field is DecafFunction) {
       field.enclosing.define('this', this);
@@ -136,7 +146,7 @@ class DecafInstance implements Value {
   }
 
   void setField(Token name, Value value) {
-    _class.scope.assignAt(0, name, value);
+    fields[name.lexeme] = value;
   }
 
   @override

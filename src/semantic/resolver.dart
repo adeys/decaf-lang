@@ -263,7 +263,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     
     currentClass = symbol;
     symbols.setSymbol(name, symbol);
-    //symbols.updateType(type);
+    Scope parent = symbols.scopes[0];
 
     // Check parent class
     if (stmt.parent != null) {
@@ -274,8 +274,9 @@ class Resolver implements StmtVisitor, ExprVisitor {
           ErrorReporter.report(new SemanticError(stmt.parent, "No declaration for class '${stmt.parent.lexeme}' found."));
         } else {
           CustomType curr = symbols.getType(name) as CustomType;
-          Type parent = symbols.getType(stmt.parent.lexeme);
-          curr.parent = parent;
+          CustomType enclosing = symbols.getType(stmt.parent.lexeme);
+          curr.parent = enclosing;
+          parent = enclosing.scope;
         }
       }
     }
@@ -300,7 +301,10 @@ class Resolver implements StmtVisitor, ExprVisitor {
       _resolve(method);
     }
 
-    (symbols.getType(name) as CustomType).scope = symbols.current;
+    CustomType type = (symbols.getType(name) as CustomType);
+    type.scope = symbols.current;
+    type.scope.enclosing = parent;
+
     symbols.endScope();
 
     currentClass = null;
@@ -314,7 +318,9 @@ class Resolver implements StmtVisitor, ExprVisitor {
       String owner = (expr.object as VariableExpr).name.lexeme;
       String field = (expr.field as VariableExpr).name.lexeme;
 
-      if (!symbols.getSymbol(owner).initialized) {
+      var init = symbols.getSymbol(owner)?.initialized;
+
+      if (init == null || !init) {
         ErrorReporter.report(new SemanticError(expr.dot, "Cannot access '$field' on unitialized object."));
       }
     }

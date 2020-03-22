@@ -291,14 +291,15 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     _env.define(stmt.name.lexeme, klass);
 
     DecafClass parent;
-    
+
+    Map<String, Value> fields = {};    
     if (stmt.parent != null) {
       parent = _globals.getAt(0, stmt.parent.lexeme);
+      fields = parent.fields;
     }
 
     _env = new Environment(_env);
 
-    Map<String, Value> fields = {};
     for (VarStmt field in stmt.fields) {
       _execute(field);
       String name = field.name.lexeme;
@@ -337,7 +338,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitThisExpr(ThisExpr expr) {
-    return _env.getAt(2, 'this');
+    return _env.get(expr.keyword);
   }
 
   @override
