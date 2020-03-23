@@ -12,6 +12,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   ScopeOwner scopes;
   TypeTable types;
   ScopeType currentScope =  ScopeType.GLOBAL;
+  Symbol currentClass;
 
   Analyzer(SymbolTable table) {
     scopes = new ScopeOwner(table);
@@ -374,6 +375,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   visitClassStmt(ClassStmt stmt) {
     enterScope();
     currentScope = ScopeType.CLASS;
+    currentClass = scopes.getAt(0, stmt.name.lexeme);
 
     for (VarStmt field in stmt.fields) {
       resolve(field);
@@ -391,6 +393,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
     exitScope();
     currentScope = ScopeType.GLOBAL;
+    currentClass = null;
   }
 
   void _checkOverrides(Map<Token, Symbol> methods, CustomType parent) {
@@ -430,8 +433,13 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     // Check wether the class has the field
     if (target.scope.classHas(field)) {
       type = target.scope.getClassSymbol(field).type;
-      if (type is! FunctionType && currentScope != ScopeType.CLASS) {
-        ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' only accessible within class scope."));
+      if (type is! FunctionType) {
+        if (currentScope != ScopeType.CLASS) {
+          ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' only accessible within class scope."));
+        } else if (currentClass != null && !target.isCompatible(currentClass.type)) {
+          // If we're in a class context and try to access unrelated class field, throw an error
+          ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' cannot be accessed within unrelated class scope."));
+        }
       }
 
       return type;
