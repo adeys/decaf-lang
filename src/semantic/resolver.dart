@@ -221,7 +221,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
       symbol.initialized = true;
     }
 
-    symbol.type = stmt.type;
+    symbol.type = stmt.type is CustomType ? symbols.getType(stmt.type.name) :  stmt.type;
     symbols.setSymbol(name, symbol);
   }
 
@@ -264,7 +264,8 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitClassStmt(ClassStmt stmt) {
     String name = stmt.name.lexeme;
-    Symbol symbol = new Symbol(name, symbols.getType(name));
+    CustomType type = symbols.getType(name);
+    Symbol symbol = new Symbol(name, type);
     
     currentClass = symbol;
     symbols.setSymbol(name, symbol);
@@ -278,9 +279,8 @@ class Resolver implements StmtVisitor, ExprVisitor {
         if (!symbols.typeExists(stmt.parent.lexeme)) {
           ErrorReporter.report(new SemanticError(stmt.parent, "No declaration for class '${stmt.parent.lexeme}' found."));
         } else {
-          CustomType curr = symbols.getType(name) as CustomType;
           CustomType enclosing = symbols.getType(stmt.parent.lexeme);
-          curr.parent = enclosing;
+          type.parent = enclosing;
           parent = enclosing.scope;
         }
       }
@@ -309,9 +309,9 @@ class Resolver implements StmtVisitor, ExprVisitor {
       _resolve(method);
     }
 
-    CustomType type = (symbols.getType(name) as CustomType);
     type.scope = symbols.current;
     type.scope.enclosing = parent ?? symbols.scopes[0];
+    symbols.updateType(type);
 
     symbols.endScope();
 

@@ -1,3 +1,81 @@
+class Person {
+    string name;
+    int age;
+    string address;
+
+    string getName() {
+        return this.name;
+    }
+
+    int getAge() {
+        return this.age;
+    }
+}
+
+class Employee extends Person {
+    void init(string name, int age, string address) {
+        this.name = name;
+        this.age = age;
+        this.address = address;
+    }
+
+    string getName() {
+        print("Employee name\n");
+        return this.name;
+    }
+
+    void present() {
+        if (this.address == "") {
+            print("I'm a no-home man.\n");
+        } else {
+            print("I am ", this.getName(), " and I live at ", this.address, "\n");
+        }
+    }
+}
+
+class Player extends Person {
+    void init(string name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    string getName() {
+        print("Player name\n");
+        return this.name;
+    }
+}
+
+class Doctor extends Employee {
+    void init(string name, int age, string address) {
+        this.name = name;
+        this.age = age;
+        this.address = address;
+    }
+
+    string getName() {
+        print("Doctor name\n");
+        return this.name;
+    }
+
+    void cure(Person patient) {
+        print("Healing ", patient.name, "\n");
+    }
+}
+
 void main() {
     print("Hello World\n");
+
+    Employee john = new(Employee);
+    john.init("John Doe", 20, "Neverland");
+
+    print(john.getName(), " - ", john.getAge(), "\n");
+    john.present();
+
+    Player player = new(Player);
+    player.init("Player", 17);
+    player.getName();
+
+    Doctor doc = new(Doctor);
+    doc.getName();
+    doc.cure(doc); 
 }
