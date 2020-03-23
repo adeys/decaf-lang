@@ -25,7 +25,7 @@ class Employee extends Person {
     }
 
     void present() {
-        if (this.address == null) {
+        if (this.address == "") {
             print("I'm a no-home man.\n");
         } else {
             print("I am ", this.getName(), " and I live at ", this.address, "\n");
@@ -39,14 +39,14 @@ class Player extends Person {
         this.age = age;
     }
 
-    Player getName() {
+    string getName() {
         print("Player name\n");
         return this.name;
     }
 }
 
 class Doctor extends Employee {
-    void init(string name, double age, string address) {
+    void init(string name, int age, string address) {
         this.name = name;
         this.age = age;
         this.address = address;
@@ -73,7 +73,7 @@ void main() {
 
     Player player = new(Player);
     player.init("Player", 17);
-    player.getName("Bibi");
+    player.getName();
 
     Person doc = new(Doctor);
     doc.getName();

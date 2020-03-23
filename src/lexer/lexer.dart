@@ -262,10 +262,10 @@ class Lexer {
   }
 
   bool _isAlpha(String char) {
-    return new RegExp('[a-zA-Z]').hasMatch(char);
+    return new RegExp('[a-zA-Z_]').hasMatch(char);
   }
 
   bool _isAlphaNum(String char) {
-    return char == '_' || _isAlpha(char) || _isDigit(char);
+    return _isAlpha(char) || _isDigit(char);
   }
 }
