@@ -20,7 +20,7 @@ class SymbolTable {
   }
 
   void endScope() {
-    current = current.enclosing;
+    current = current.type == ScopeType.CLASS ? scopes[0] : current.enclosing;
   }
 
   void addSymbol(Symbol symbol) {
@@ -38,6 +38,10 @@ class SymbolTable {
   bool hasSymbol(String symbol) {
     Scope scope = current;
     while( scope != null) {
+      // Disable field access without 'this' keyword in method body
+      if (scope.type == ScopeType.CLASS && scope.has(symbol)) {
+        return false;
+      }
       if (scope.has(symbol)) return true;
       scope = scope.enclosing;
     }

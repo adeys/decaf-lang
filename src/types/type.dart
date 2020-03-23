@@ -14,7 +14,7 @@ class BuiltinType extends Type {
   static BuiltinType STRING = new BuiltinType('string');
   static BuiltinType DOUBLE = new BuiltinType('double');
   static BuiltinType NULL = new BuiltinType('null');
-  static BuiltinType ERROR = new BuiltinType('invalid');
+  static BuiltinType ERROR = new BuiltinType('undefined');
 
   BuiltinType(this.name);
 
@@ -25,7 +25,7 @@ class BuiltinType extends Type {
 
   @override
   bool isCompatible(Type type) {
-    if (type is BuiltinType) return type.name == 'error' || name == type.name;
+    if (type is BuiltinType) return name == BuiltinType.ERROR.name || type.name == BuiltinType.ERROR.name || name == type.name;
 
     return false;
   }
@@ -43,6 +43,21 @@ class FunctionType extends Type {
     return false;
   }
   
+  bool isMethodCompatible(FunctionType type) {
+    // Check params length
+    if (type.paramsType.length != paramsType.length) {
+      return false;
+    }
+
+    for (int i = 0; i < paramsType.length; i++) {
+      if (!(type.paramsType[i].isCompatible(paramsType[i]))) {
+        return false;
+      }
+    }
+
+    return returnType == type.returnType;
+  }
+
   @override
   String toString() {
     return name;

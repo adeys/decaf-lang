@@ -1,0 +1,140 @@
+
+
+
+class Matrix {
+  
+  
+  void Init() {}
+  void Set(int x, int y, int value) {} 
+  int Get(int x, int y) {}
+
+  void printMatrix() {
+    int i;
+    int j;
+    for (i = 0; i < 10; i = i + 1) {
+      for (j = 0; j < 10; j = j + 1) 
+	   print(this.Get(i,j), "\t");
+      print("\n");
+    }
+  }
+  void SeedMatrix() {
+    int i;
+    int j;
+    for (i = 0; i < 5; i = i + 1) 
+      for (j = 0; j < 5; j = j + 1) 
+	   this.Set(i,j, i+j);
+    this.Set(2,3,4);
+    this.Set(4,6,2);
+    this.Set(2,3,5);
+    this.Set(0,0,1);
+    this.Set(1,6,3);
+    this.Set(7,7,7);
+  }
+}
+
+
+
+class DenseMatrix extends Matrix {
+  int[][] m;
+  void Init() {
+    int i;
+    int j;
+
+    
+    this.m = array(10, int[]);
+    for (i = 0; i < 10; i = i +1) 
+      this.m[i] = array(10, int);
+
+    
+    for (i = 0; i < 10; i = i + 1) 
+      for (j = 0; j < 10; j = j + 1) 
+		this.m[i][j] = 0;
+  }
+  void Set(int x, int y, int value) {
+    this.m[x][y] = value;
+  }
+  int Get(int x, int y) {
+    return this.m[x][y];
+  }
+}
+
+
+class SparseItem {
+  int data;
+  int y;
+  SparseItem next;
+  void Init(int d, int y, SparseItem next) {
+    this.data = d;
+    this.y = y;
+    this.next = next;
+  }
+  SparseItem GetNext() { return this.next;}
+  int GetY() { return this.y;}
+  int GetData() { return this.data;}
+  void SetData(int val) { this.data = val;}
+  
+}
+
+
+class SparseMatrix extends Matrix {
+  SparseItem[] m;
+  void Init() {
+    int i;
+
+    
+    this.m = array(10, SparseItem);
+    for (i = 0; i < 10; i = i + 1)
+      this.m[i] = null;
+
+  }
+  
+  SparseItem Find(int x, int y) {
+    SparseItem elem;
+    elem = this.m[x];
+    while (elem != null) {
+      if (elem.GetY() == y) {
+	return elem;
+      }
+      elem = elem.GetNext();
+    }
+    return null;
+  }
+  
+  void Set(int x, int y, int value) {
+    SparseItem elem;
+    elem = this.Find(x,y);
+    if (elem != null) {
+      elem.SetData(value);
+    } else {
+      elem = new SparseItem();
+      elem.Init(value, y, this.m[x]);
+      this.m[x] = elem;
+    }
+  }
+  
+  int Get(int x, int y) {
+    SparseItem elem;
+    elem = this.Find(x,y);
+    if (elem != null) {
+      return elem.GetData();
+    } else {
+      return 0;
+    }
+  }
+}
+
+void main()  {
+  Matrix m;
+  print("Dense Rep \n");
+  m = new DenseMatrix();
+  m.Init();
+  m.SeedMatrix();
+  m.printMatrix();
+  
+  
+  print("Sparse Rep \n");
+  m = new SparseMatrix();
+  m.Init();
+  m.SeedMatrix();
+  m.printMatrix();
+}

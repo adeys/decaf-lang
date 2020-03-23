@@ -19,6 +19,12 @@ class Value {
   }
 
   bool equalsTo(Value value) {
+    if (this.type is CustomType && !this.initialized) {
+      return value.type.name == BuiltinType.NULL.name;
+    } else if (value.type is CustomType && !value.initialized) {
+      return this.type.name == BuiltinType.NULL.name;
+    }
+
     return this.type.name == value.type.name && this.value == value.value; 
   }
 }
@@ -30,14 +36,17 @@ class NullValue extends Value {
 class ArrayValue extends Value {
   List<Value> values = [];
   int size;
-  ArrayValue(Type type, this.size) : super(type) {
+  Type base;
+
+  ArrayValue(ArrayType type, this.size) : super(type) {
     values = new List<Value>(size);
-    values.fillRange(0, size - 1, new Value(type));
+    base = type.base;
+    values.fillRange(0, size - 1, new Value(base));
     initialized = true;
   }
 
   void set(int index, Value value) {
-    value.type = type;
+    value.type = base;
     values[index] = value;
   }
 
@@ -64,17 +73,21 @@ class DecafFunction extends DecafCallable {
   FunctionStmt stmt;
   String name;
   Environment enclosing;
+  DecafInstance bound;
 
   DecafFunction(this.stmt, this.enclosing);
 
   Value callFun(Interpreter interpreter, List<Value> args) {
     Environment env = new Environment(enclosing);
 
+    if (this.bound != null) {
+      env.define('this', bound);
+    }
+
     for (int i = 0; i < args.length; i++) {
       env.define(stmt.params[i].name.lexeme, args[i]);
     }
 
-    //print('Called...${stmt.name.lexeme}');
     Value result = new NullValue();
     try {
       interpreter.executeBlock(stmt.body.statements, new Environment(env));      
@@ -83,6 +96,10 @@ class DecafFunction extends DecafCallable {
     }
 
     return result;
+  }
+
+  void bind(DecafInstance instance) {
+    bound = instance;
   }
 
   @override
@@ -109,11 +126,11 @@ class DecafClass {
 
   DecafClass(this.name, [this.fields, this.methods, this.scope]);
 
-  Value getField(String name) {
-    Value field = fields[name] ?? methods[name];
+  Value getMethod(String name) {
+    DecafFunction field = methods[name];
 
     if (field == null && parent != null) {
-      return parent.getField(name);
+      field = parent.getMethod(name);
     }
 
     return field;
@@ -122,21 +139,32 @@ class DecafClass {
 
 class DecafInstance implements Value {
   DecafClass _class;
+  Map<String,Value> fields = {};
 
-  DecafInstance(this.type, this._class);
+  DecafInstance(this.type, this._class) {
+    Value value = new NullValue();
+
+    _class.fields.keys.forEach((String key) {
+      fields[key] = value;
+    });
+  }
 
   Value getField(String name) {
-    Value field = _class.getField(name);
+    if (fields.containsKey(name)) {
+      return fields[name];
+    }
+
+    Value field = _class.getMethod(name);
 
     if (field is DecafFunction) {
-      field.enclosing.define('this', this);
+      field.bind(this);
     }
 
     return field;
   }
 
   void setField(Token name, Value value) {
-    _class.scope.assignAt(0, name, value);
+    fields[name.lexeme] = value;
   }
 
   @override
@@ -147,7 +175,12 @@ class DecafInstance implements Value {
 
   @override
   bool equalsTo(Value value) {
-    return this == value;
+    return this == value;   
+  }
+
+  @override
+  String toString() {
+    return _class.toString() + ' instance';
   }
 
   @override

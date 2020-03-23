@@ -2,6 +2,7 @@ import '../ast/expression.dart';
 import '../ast/statement.dart';
 import '../error/error.dart';
 import '../error/error_reporter.dart';
+import '../lexer/tokens.dart';
 import '../symbol/scope.dart';
 import '../symbol/symbol.dart';
 import '../types/type.dart';
@@ -11,6 +12,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   ScopeOwner scopes;
   TypeTable types;
   ScopeType currentScope =  ScopeType.GLOBAL;
+  Symbol currentClass;
 
   Analyzer(SymbolTable table) {
     scopes = new ScopeOwner(table);
@@ -49,7 +51,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     }
   }
 
-  void checkAssignment(Type target, Type value, line) {
+  void checkAssignment(Type target, Type value, int line) {
     if (!target.isCompatible(value)) {
       ErrorReporter.report(new TypeError(line, "Cannot assign expression of type '${value}' to variable of type '${target}'."));
     }
@@ -72,7 +74,13 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       checkAssignment(target.type, resolveType(expr.value), expr.op.line);
     } else if (expr.target is IndexExpr) {
       IndexExpr target = expr.target as IndexExpr;
-      checkAssignment((resolveType(target.owner) as ArrayType).base, resolveType(expr.value), expr.op.line);
+      Type type = resolveType(target.owner);
+      if (type is ArrayType) {
+        checkAssignment(type.base, resolveType(expr.value), expr.op.line);
+      } else {
+        ErrorReporter.report(new TypeError(expr.op.line, "'${target.owner}' is not of type array."));
+      }
+      
     } else if (expr.target is AccessExpr) {
       AccessExpr target = expr.target as AccessExpr;
       checkAssignment(resolveType(target), resolveType(expr.value), expr.op.line);
@@ -80,7 +88,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   }
 
   bool _isNum(Type type) {
-    return type.name == BuiltinType.INT.name || type.name == BuiltinType.DOUBLE.name;
+    List<String> types = [BuiltinType.INT.name, BuiltinType.DOUBLE.name, BuiltinType.ERROR.name];
+    return types.contains(type.name);
   }
 
   Type checkBinary(BinaryExpr expr) {
@@ -120,7 +129,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       case '==':
       case '!=':
         Type left = resolveType(expr.left);
-        Type right = resolveType(expr.left);
+        Type right = resolveType(expr.right);
         if (!left.isCompatible(right)) {
           ErrorReporter.report(new TypeError(expr.op.line, "Operands to '${expr.op.lexeme}' must be of same type. Got('$left' and '$right')."));
           return expr.type = BuiltinType.ERROR;
@@ -229,7 +238,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitGroupingExpr(GroupingExpr expr) {
-    return expr.type = resolveType(expr.expression);
+    expr.type = resolveType(expr.expression);
+    return expr.type;
   }
 
   @override
@@ -264,7 +274,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitPrintStmt(PrintStmt stmt) {
-    List<String> allowed = [BuiltinType.STRING.name, BuiltinType.INT.name, BuiltinType.BOOL.name];
+    List<String> allowed = [BuiltinType.STRING.name, BuiltinType.INT.name, BuiltinType.BOOL.name, BuiltinType.ERROR.name];
 
     for (int i = 0; i < stmt.expressions.length; i++) {
       Type type = resolveType(stmt.expressions[i]);
@@ -366,17 +376,36 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   visitClassStmt(ClassStmt stmt) {
     enterScope();
     currentScope = ScopeType.CLASS;
+    currentClass = scopes.getAt(0, stmt.name.lexeme);
 
     for (VarStmt field in stmt.fields) {
       resolve(field);
     }
 
+    Map<Token, Symbol> syms = {};
     for (FunctionStmt method in stmt.methods) {
       resolve(method);
+      syms[method.name] = scopes.current.getSymbol(method.name.lexeme);
+    }
+
+    if (stmt.parent != null) {
+      _checkOverrides(syms, types.getNamedType(stmt.parent.lexeme));
     }
 
     exitScope();
     currentScope = ScopeType.GLOBAL;
+    currentClass = null;
+  }
+
+  void _checkOverrides(Map<Token, Symbol> methods, CustomType parent) {
+    for (Token method in methods.keys) {
+      Type type = parent.scope.getClassSymbol(method.lexeme)?.type;
+      if (type is FunctionType) {
+        if (!type.isMethodCompatible(methods[method].type)) {
+          ErrorReporter.report(new TypeError(method.line, "Overriden method '${method.lexeme}' signature must be compatible with parent's class one"));
+        }
+      }
+    }
   }
 
   @override
@@ -390,7 +419,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
     if (expr.object is VariableExpr) {
       if (types.hasNamedType((expr.object as VariableExpr).name.lexeme)) {
-        ErrorReporter.report(new TypeError(expr.dot.line, "Cannot get field '$field' on $type."));
+        ErrorReporter.report(new TypeError(expr.dot.line, "Cannot get field '$field' on type $type."));
         return;
       }
     }
@@ -403,16 +432,21 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     CustomType target = types.getType(type);
 
     // Check wether the class has the field
-    if (target.scope.has(field)) {
-      type = target.scope.getSymbol(field).type;
-      if (type is! FunctionType && currentScope != ScopeType.CLASS) {
-        ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' only accessible within class scope."));
+    if (target.scope.classHas(field)) {
+      type = target.scope.getClassSymbol(field).type;
+      if (type is! FunctionType) {
+        if (currentScope != ScopeType.CLASS) {
+          ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' only accessible within class scope."));
+        } else if (currentClass != null && !target.isCompatible(currentClass.type)) {
+          // If we're in a class context and try to access unrelated class field, throw an error
+          ErrorReporter.report(new SemanticError(expr.dot, "$target field '$field' cannot be accessed within unrelated class scope."));
+        }
       }
 
       return type;
     } else {
       ErrorReporter.report(new TypeError(expr.dot.line, "$target has no such field '$field'."));
-      return BuiltinType.NULL;
+      return BuiltinType.ERROR;
     }
   }
 
@@ -429,7 +463,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       return;
     }
 
-    return expr.type = types.getNamedType(expr.type.name);
+    expr.type = types.getNamedType(expr.type.name);
+    return expr.type;
   }
 
   @override

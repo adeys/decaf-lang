@@ -300,9 +300,9 @@ class Parser {
   NewExpr _getNewExpr() {
     Token keyword = _previous;
 
-    _expect(TokenType.LEFT_PAREN, "Expect '(' after 'new'.");
     Type type = _expectType(false);
-    _expect(TokenType.RIGHT_PAREN, "Expect ')' after new expression.");
+    _expect(TokenType.LEFT_PAREN, "Expect '(' after class name.");
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after class name.");
 
     return new NewExpr(keyword, type);
   }

@@ -16,7 +16,7 @@ class ScopeOwner {
   }
 
   void endScope() {
-    current = current.enclosing;
+    current = current.type == ScopeType.CLASS ? table.scopes[0] : current.enclosing;
   }
 
   Symbol fromCurrent(String symbol) {

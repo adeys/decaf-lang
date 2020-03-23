@@ -1,0 +1,304 @@
+
+
+
+int probOfMine; 
+
+
+class rndModule {
+
+  int seed;
+
+  void Init(int seedVal) {
+    this.seed = seedVal;
+  }
+
+  int Random() {
+    this.seed = (15625 * (this.seed % 10000) + 22221) % 65536;
+    return this.seed;
+  }
+
+  int RndInt(int max) {
+    return (this.Random() % max);
+  }
+
+}
+
+rndModule gRnd = null;
+
+class Block
+{
+  bool hasMine;
+  int adjMines;
+  bool isUncovered;
+
+  void Init() {
+     this.hasMine = false;
+     this.adjMines = 0;
+     this.isUncovered = false;
+  }
+
+  void Uncover() {
+    this.isUncovered = true;
+  }
+
+  bool IsUncovered() {
+    return this.isUncovered;
+  }
+
+  void SetMine(bool m) {
+     this.hasMine = m;
+  }
+
+  bool HasMine() {
+     return this.hasMine;
+  }
+
+  void IncrementAdjacents(int i) {
+    this.adjMines = this.adjMines + i;
+  }
+
+  void SetAdjacents(int i) {
+    this.adjMines = i;
+  }
+
+  int NumAdjacents() {
+    return this.adjMines;
+  }
+
+  void newOutput(bool newSolution) {
+    if(newSolution) {
+      if(this.hasMine) {
+        if(!this.isUncovered) print("x");
+        else print("%");
+      }
+      else print(this.adjMines);
+      return;
+    }
+    if(this.isUncovered) {
+      if(!this.hasMine) print(this.adjMines);
+    } else {
+      print("+");
+    }
+  }
+}
+
+class Field
+{
+  int height;
+  int width;
+  Block [][]arr;
+  bool hasNotBlownUp;
+  int numOpenBlocks;
+  int numBlocksCleared;
+
+
+  void Init(int h, int w) {
+    int i;
+    int j;
+
+    this.height = h;
+    this.width = w;
+    this.hasNotBlownUp = true;
+    this.numOpenBlocks = (h * w);
+    this.numBlocksCleared = 0;
+    this.arr = array(this.width, Block[]);
+    for(i = 0; i < this.width; i = i + 1) {
+      this.arr[i] = array(this.height, Block);
+    }
+    for(i = 0; i < this.width; i = i + 1) {
+      for(j = 0; j < this.height; j = j + 1) {
+        this.arr[i][j] = new Block();
+        this.arr[i][j].Init();
+      }
+    }
+    this.PlantMines();
+  }
+
+  int GetWidth() { return this.width; }
+  int GetHeight() { return this.height; }
+
+  void PlantMines() {
+    int i;
+    int j;
+    for(i = 0; i < this.width; i = i + 1) {
+      for(j = 0; j < this.height; j = j + 1) {
+        this.PlantOneMine(i, j);
+      }
+    }
+  }
+
+  void PlantOneMine(int i, int j) {
+    int x;
+    int y;
+    int rand;
+    rand = gRnd.RndInt(100);
+    if(rand < probOfMine) {
+      this.arr[i][j].SetMine(true);
+      this.numOpenBlocks = this.numOpenBlocks - 1;
+      for(x = i - 1; x <= i + 1; x = x + 1) {
+        for(y = j - 1; y <= j + 1; y = y + 1) {
+          if(x >= 0 && x < this.width && y >= 0 && y < this.height) {
+            if(!this.arr[x][y].HasMine()) {
+              this.arr[x][y].IncrementAdjacents(1);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  void newField(bool newSolution)
+  {
+    int i;
+    int  j;
+    print("   ");
+    for(i = 0; i < this.width; i = i + 1) {
+      print(i, " ");
+    }
+    print("\n +");
+    for(i = 0; i <  this.width; i = i + 1) {
+      print("--");
+    }
+    print("\n");
+    for(j = 0; j < this.height; j = j + 1) {
+      print(j, "| ");
+      for(i = 0; i < this.width; i = i + 1) {
+        this.arr[i][j].newOutput(newSolution);
+        print(" ");
+      }
+      print("\n |\n");
+    }
+  }
+
+  void Expand(int x, int y)
+  {
+    int i;
+    int j;
+    if(this.arr[x][y].IsUncovered()) return;
+    this.arr[x][y].Uncover();
+    if(this.arr[x][y].HasMine()) {
+      this.hasNotBlownUp = false;
+      return;
+    }
+    this.numBlocksCleared = this.numBlocksCleared + 1;
+    if(this.arr[x][y].NumAdjacents() != 0) {
+     return;
+    }
+    for(i = x - 1; i <= x + 1; i = i + 1) {
+      for(j = y - 1; j <= y + 1; j = j + 1) {
+        if(i >= 0 && i < this.width && j >= 0 && j < this.height) {
+          this.Expand(i, j);
+        }
+      }
+    }
+  }
+
+  bool HasNotBlownUp() {
+    return this.hasNotBlownUp;
+  }
+
+  bool HasClearedEverything() {
+    return (this.numBlocksCleared == this.numOpenBlocks);
+  }
+
+}
+
+class Game
+{
+   Field field;
+
+   void Init(int width, int height) {
+     this.field = new Field();
+     this.field.Init(width, height);
+   }
+   
+   void PlayGame() {
+     int x;
+     int y;
+     while(this.field.HasNotBlownUp() && !this.field.HasClearedEverything()) {
+       this.field.newField(false);
+       x = this.PromptForInt(
+   "Enter horizontal coordinate, -1 to quit, -2 for help, -3 for grid: "
+           , -3, this.field.GetWidth()-1);
+       if(x == -1) break;
+       y = this.PromptForInt(
+           "Enter vertical coordinate, -1 to quit, -2 for help, -3 for grid: "
+           , -3, this.field.GetHeight()-1);
+       if(y == -1) break;
+       print("Clearing (", x, ", ",y, ")\n");
+       this.field.Expand(x, y);
+     }
+     if(this.field.HasNotBlownUp()) this.AnnounceWin();
+     else this.AnnounceLoss();
+   }
+
+   int PromptForInt(string prompt, int min, int max) {
+      int x;
+      while(true) {
+        print(prompt);
+        x = readInt();
+        if(x >= min && x <= max) {
+          if(x == -1) return -1;
+          if(x == -2) newHelp();
+          else if(x == -3) this.field.newField(false);
+          else return x;
+        }
+      }
+   }
+
+   void AnnounceWin() {
+     this.field.newField(true);
+     if(this.field.HasClearedEverything()) print("You win!  Good job.\n");
+     else print("Quitter!!\n");
+   }
+   
+   void AnnounceLoss() {
+     this.field.newField(true);
+     print("Ha ha!! You blew up!!  Ha ha!!\n");
+   }
+
+}
+
+void newHelp()
+{
+  print("Welcome to Low-Fat Decaf Minesweeper!\n");
+  print("On the screen you will see a grid that represents your field.\n");
+  print("In each location there may or may not be a mine hidden.  In \n");
+  print("order to clear the field, enter in the coordinates of the \n");
+  print("location you want to uncover.\n\n");
+  print("As you clear mines, the grid will change.  There are two symbols:\n");
+  print("    '+'  - you haven't uncovered this location yet\n");
+  print("a number - there is no mine here, but there are the specified \n");
+  print("           number of mines directly adjacent to this location\n");
+  print("           (including diagonals)\n");
+  print("The field will keep on expanding from the point you specified\n");
+  print("and clear all adjacent points that have no mines.\n\n");
+  print("If you uncover a location with a mine, you die, and the solution\n");
+  print("will be newed.  The solution will show these symbols: \n");
+  print("    'x'  - this location has a mine\n");
+  print("    '%'  - this is where you blew up\n");
+  print("a number - same as before\n\n");
+  print("You win when you have uncovered all locations without a mine.\n");
+  
+}
+
+void main()
+{
+  int w;
+  int h;
+  Game g;
+
+  gRnd = new rndModule();
+  print("Please enter in a random seed: ");
+  gRnd.Init(readInt());
+  print("How much of the field do you want to have mines? (0%-100%) ");
+  probOfMine = readInt();
+  print("How wide do you want the field to be? ");
+  w = readInt();
+  print("How tall do you want the field to be? ");
+  h = readInt();
+
+  g = new Game();
+  g.Init(w, h);
+  g.PlayGame();  
+}

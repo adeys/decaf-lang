@@ -42,6 +42,9 @@ Object run(String program) {
   } on CompilerError catch (e) {
     ErrorReporter.report(e);
     return null;
+  } catch(e) {
+    print('Dart error : ' + e.toString());
+    return null;
   }
 }
 

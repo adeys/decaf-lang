@@ -114,6 +114,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitForStmt(ForStmt stmt) {
     if (stmt.initializer !=  null) _resolve(stmt.initializer);
     _resolve(stmt.condition);
+    if (stmt.incrementer !=  null) _resolve(stmt.incrementer);
     
     LoopScope enclosing = loop;
     loop = LoopScope.LOOP;
@@ -143,6 +144,10 @@ class Resolver implements StmtVisitor, ExprVisitor {
     
     for (VarStmt param in stmt.params) {
       _resolve(param);
+      // Mark function parameters as initialized
+      if (symbols.hasSymbol(param.name.lexeme)) {
+        symbols.current.getSymbol(param.name.lexeme).initialized = true;
+      } 
     }
     
     _resolve(stmt.body);
@@ -216,7 +221,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
       symbol.initialized = true;
     }
 
-    symbol.type = stmt.type;
+    symbol.type = stmt.type is CustomType ? symbols.getType(stmt.type.name) :  stmt.type;
     symbols.setSymbol(name, symbol);
   }
 
@@ -259,11 +264,12 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitClassStmt(ClassStmt stmt) {
     String name = stmt.name.lexeme;
-    Symbol symbol = new Symbol(name, symbols.getType(name));
+    CustomType type = symbols.getType(name);
+    Symbol symbol = new Symbol(name, type);
     
     currentClass = symbol;
     symbols.setSymbol(name, symbol);
-    //symbols.updateType(type);
+    Scope parent;
 
     // Check parent class
     if (stmt.parent != null) {
@@ -273,17 +279,25 @@ class Resolver implements StmtVisitor, ExprVisitor {
         if (!symbols.typeExists(stmt.parent.lexeme)) {
           ErrorReporter.report(new SemanticError(stmt.parent, "No declaration for class '${stmt.parent.lexeme}' found."));
         } else {
-          CustomType curr = symbols.getType(name) as CustomType;
-          Type parent = symbols.getType(stmt.parent.lexeme);
-          curr.parent = parent;
+          CustomType enclosing = symbols.getType(stmt.parent.lexeme);
+          type.parent = enclosing;
+          parent = enclosing.scope;
         }
       }
     }
 
     symbols.beginScope(ScopeType.CLASS);
     // Declare all fields in current scope
+    bool hasParent = parent != null; 
+
     for (VarStmt field in stmt.fields) {
-      declare(field);
+      if (hasParent) {
+        if (parent.has(field.name.lexeme)) {
+          ErrorReporter.report(new SemanticError(stmt.parent, "Cannot override inherited property '${field.name.lexeme}' in class '$name'."));
+        }
+      }
+
+      _resolve(field);
     }
 
     // Then declare all methods
@@ -291,16 +305,14 @@ class Resolver implements StmtVisitor, ExprVisitor {
       declare(method);
     }
 
-    // Now resolve fields
-    for (VarStmt field in stmt.fields) {
-      _resolve(field);
-    }
-
     for (FunctionStmt method in stmt.methods) {
       _resolve(method);
     }
 
-    (symbols.getType(name) as CustomType).scope = symbols.current;
+    type.scope = symbols.current;
+    type.scope.enclosing = parent ?? symbols.scopes[0];
+    symbols.updateType(type);
+
     symbols.endScope();
 
     currentClass = null;
@@ -314,7 +326,10 @@ class Resolver implements StmtVisitor, ExprVisitor {
       String owner = (expr.object as VariableExpr).name.lexeme;
       String field = (expr.field as VariableExpr).name.lexeme;
 
-      if (!symbols.getSymbol(owner).initialized) {
+      Symbol sym = symbols.getSymbol(owner);
+      var init = sym?.initialized;
+
+      if (init == null || !init) {
         ErrorReporter.report(new SemanticError(expr.dot, "Cannot access '$field' on unitialized object."));
       }
     }
