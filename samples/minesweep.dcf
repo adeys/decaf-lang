@@ -23,7 +23,7 @@ class rndModule {
 
 }
 
-rndModule gRnd;
+rndModule gRnd = null;
 
 class Block
 {

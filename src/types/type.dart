@@ -14,7 +14,7 @@ class BuiltinType extends Type {
   static BuiltinType STRING = new BuiltinType('string');
   static BuiltinType DOUBLE = new BuiltinType('double');
   static BuiltinType NULL = new BuiltinType('null');
-  static BuiltinType ERROR = new BuiltinType('invalid');
+  static BuiltinType ERROR = new BuiltinType('undefined');
 
   BuiltinType(this.name);
 

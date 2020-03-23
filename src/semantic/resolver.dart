@@ -334,7 +334,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
       var init = sym?.initialized;
 
       if (init == null || !init) {
-        //ErrorReporter.report(new SemanticError(expr.dot, "Cannot access '$field' on unitialized object."));
+        ErrorReporter.report(new SemanticError(expr.dot, "Cannot access '$field' on unitialized object."));
       }
     }
   }
