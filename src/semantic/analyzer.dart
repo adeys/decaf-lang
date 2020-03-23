@@ -88,7 +88,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
   }
 
   bool _isNum(Type type) {
-    return type.name == BuiltinType.INT.name || type.name == BuiltinType.DOUBLE.name;
+    List<String> types = [BuiltinType.INT.name, BuiltinType.DOUBLE.name, BuiltinType.ERROR.name];
+    return types.contains(type.name);
   }
 
   Type checkBinary(BinaryExpr expr) {
@@ -273,7 +274,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitPrintStmt(PrintStmt stmt) {
-    List<String> allowed = [BuiltinType.STRING.name, BuiltinType.INT.name, BuiltinType.BOOL.name];
+    List<String> allowed = [BuiltinType.STRING.name, BuiltinType.INT.name, BuiltinType.BOOL.name, BuiltinType.ERROR.name];
 
     for (int i = 0; i < stmt.expressions.length; i++) {
       Type type = resolveType(stmt.expressions[i]);

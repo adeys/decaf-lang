@@ -25,7 +25,7 @@ class BuiltinType extends Type {
 
   @override
   bool isCompatible(Type type) {
-    if (type is BuiltinType) return type.name == 'error' || name == type.name;
+    if (type is BuiltinType) return name == BuiltinType.ERROR.name || type.name == BuiltinType.ERROR.name || name == type.name;
 
     return false;
   }
