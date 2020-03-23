@@ -296,17 +296,13 @@ class Resolver implements StmtVisitor, ExprVisitor {
           ErrorReporter.report(new SemanticError(stmt.parent, "Cannot override inherited property '${field.name.lexeme}' in class '$name'."));
         }
       }
-      declare(field);
+
+      _resolve(field);
     }
 
     // Then declare all methods
     for (FunctionStmt method in stmt.methods) {
       declare(method);
-    }
-
-    // Now resolve fields
-    for (VarStmt field in stmt.fields) {
-      _resolve(field);
     }
 
     for (FunctionStmt method in stmt.methods) {

@@ -38,6 +38,10 @@ class SymbolTable {
   bool hasSymbol(String symbol) {
     Scope scope = current;
     while( scope != null) {
+      // Disable field access without 'this' keywordin method body
+      if (scope.type == ScopeType.CLASS) {
+        return false;
+      }
       if (scope.has(symbol)) return true;
       scope = scope.enclosing;
     }
