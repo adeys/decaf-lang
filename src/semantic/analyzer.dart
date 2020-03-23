@@ -50,7 +50,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     }
   }
 
-  void checkAssignment(Type target, Type value, line) {
+  void checkAssignment(Type target, Type value, int line) {
     if (!target.isCompatible(value)) {
       ErrorReporter.report(new TypeError(line, "Cannot assign expression of type '${value}' to variable of type '${target}'."));
     }
@@ -73,7 +73,13 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       checkAssignment(target.type, resolveType(expr.value), expr.op.line);
     } else if (expr.target is IndexExpr) {
       IndexExpr target = expr.target as IndexExpr;
-      checkAssignment((resolveType(target.owner) as ArrayType).base, resolveType(expr.value), expr.op.line);
+      Type type = resolveType(target.owner);
+      if (type is ArrayType) {
+        checkAssignment(type.base, resolveType(expr.value), expr.op.line);
+      } else {
+        ErrorReporter.report(new TypeError(expr.op.line, "'${target.owner}' is not of type array."));
+      }
+      
     } else if (expr.target is AccessExpr) {
       AccessExpr target = expr.target as AccessExpr;
       checkAssignment(resolveType(target), resolveType(expr.value), expr.op.line);
@@ -121,7 +127,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       case '==':
       case '!=':
         Type left = resolveType(expr.left);
-        Type right = resolveType(expr.left);
+        Type right = resolveType(expr.right);
         if (!left.isCompatible(right)) {
           ErrorReporter.report(new TypeError(expr.op.line, "Operands to '${expr.op.lexeme}' must be of same type. Got('$left' and '$right')."));
           return expr.type = BuiltinType.ERROR;
@@ -230,7 +236,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
 
   @override
   visitGroupingExpr(GroupingExpr expr) {
-    return expr.type = resolveType(expr.expression);
+    expr.type = resolveType(expr.expression);
+    return expr.type;
   }
 
   @override
@@ -447,7 +454,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       return;
     }
 
-    return expr.type = types.getNamedType(expr.type.name);
+    expr.type = types.getNamedType(expr.type.name);
+    return expr.type;
   }
 
   @override

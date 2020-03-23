@@ -16,6 +16,11 @@ class LiteralExpr implements Expr {
   }
 
   @override
+  String toString() {
+    return value.toString();
+  }
+
+  @override
   Type type;
 }
 
@@ -27,6 +32,11 @@ class VariableExpr implements Expr {
   @override
   Object accept(ExprVisitor visitor) {
     return visitor.visitVariableExpr(this);
+  }
+
+  @override
+  String toString() {
+    return name.lexeme;
   }
 
   @override
@@ -78,6 +88,10 @@ class AccessExpr implements Expr {
     return visitor.visitAccessExpr(this);
   }
 
+  @override
+  String toString() {
+    return this.object.toString() + '.' + this.field.toString();
+  }
 }
 
 class ThisExpr implements Expr {
@@ -92,6 +106,10 @@ class ThisExpr implements Expr {
     return visitor.visitThisExpr(this);
   }
   
+  @override
+  String toString() {
+    return 'this';
+  }
 }
 
 class NewExpr implements Expr {

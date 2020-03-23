@@ -48,7 +48,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   @override
   visitAssignExpr(AssignExpr expr) {
     Value value = _evaluate(expr.value);
-    
+
     if (expr.target is VariableExpr) {
       _env.assign((expr.target as VariableExpr).name, value);
     } else if (expr.target is IndexExpr) {
@@ -73,7 +73,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
       DecafInstance instance = _evaluate(target.object);
       VariableExpr field = target.field as VariableExpr;
       
-      instance.setField(field.name, _evaluate(expr.value));
+      instance.setField(field.name, value);
     }
   }
 
@@ -167,7 +167,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitFunctionStmt(FunctionStmt stmt) {
-    _env.define(stmt.name.lexeme, new DecafFunction(stmt, _env));
+    _env.define(stmt.name.lexeme, new DecafFunction(stmt, _globals));
   }
 
   @override

@@ -114,6 +114,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitForStmt(ForStmt stmt) {
     if (stmt.initializer !=  null) _resolve(stmt.initializer);
     _resolve(stmt.condition);
+    if (stmt.incrementer !=  null) _resolve(stmt.incrementer);
     
     LoopScope enclosing = loop;
     loop = LoopScope.LOOP;
@@ -143,6 +144,10 @@ class Resolver implements StmtVisitor, ExprVisitor {
     
     for (VarStmt param in stmt.params) {
       _resolve(param);
+      // Mark function parameters as initialized
+      if (symbols.hasSymbol(param.name.lexeme)) {
+        symbols.current.getSymbol(param.name.lexeme).initialized = true;
+      } 
     }
     
     _resolve(stmt.body);
@@ -325,10 +330,11 @@ class Resolver implements StmtVisitor, ExprVisitor {
       String owner = (expr.object as VariableExpr).name.lexeme;
       String field = (expr.field as VariableExpr).name.lexeme;
 
-      var init = symbols.getSymbol(owner)?.initialized;
+      Symbol sym = symbols.getSymbol(owner);
+      var init = sym?.initialized;
 
       if (init == null || !init) {
-        ErrorReporter.report(new SemanticError(expr.dot, "Cannot access '$field' on unitialized object."));
+        //ErrorReporter.report(new SemanticError(expr.dot, "Cannot access '$field' on unitialized object."));
       }
     }
   }
@@ -341,7 +347,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
       return;
     }
     
-    expr.type = currentClass.type;
+    return expr.type = currentClass.type;
   }
 
   @override
