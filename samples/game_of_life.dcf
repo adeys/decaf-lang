@@ -68,7 +68,7 @@ class column
     this.length = length;
     for(y = 0; y < length; y = y + 1)
       {
-	this.arr[y] = new(cell);
+	this.arr[y] = new cell();
 	this.arr[y].Init(false);
       }
   }
@@ -94,7 +94,7 @@ class matrix
 
     for(x = 0; x < x_dim; x = x + 1)
       {
-        this.col[x] = new(column);
+        this.col[x] = new column();
 	    this.col[x].Init(y_dim);
       }
   }
@@ -164,8 +164,8 @@ class life
     this.x_dim = x_dim;
     this.y_dim = y_dim;
 
-    this.m0 = new(matrix);
-    this.m1 = new(matrix);
+    this.m0 = new matrix();
+    this.m1 = new matrix();
     
     this.current = this.m0;
 
@@ -405,7 +405,7 @@ class life
        print("Please enter an random seed\n");
        x = readInt();
        
-       this.rnd = new(rndModule);
+       this.rnd = new rndModule();
 
        this.rnd.Init(x);
 
@@ -461,7 +461,7 @@ class life
 void main()
 {    
     life l;
-    l = new(life);
+    l = new life();
 
     l.playLife();
 

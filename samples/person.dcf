@@ -65,16 +65,16 @@ class Doctor extends Employee {
 void main() {
     print("Hello World\n");
 
-    Employee john = new(Employee);
+    Employee john = new Employee();
     john.init("John Doe", 20, "Neverland");
 
     print(john.getName(), " - ", john.getAge(), "\n");
     john.present();
 
-    Player player = new(Player);
+    Player player = new Player();
     player.init("Player", 17);
     player.getName();
 
-    Person doc = new(Doctor);
+    Person doc = new Doctor();
     doc.getName();
 }

@@ -25,7 +25,7 @@ class Scope {
   bool classHas(String symbol) {
     Scope current = this; 
 
-    while (current != null) {
+    while (current != null && current.type == ScopeType.CLASS) {
       if (current.has(symbol))
         return true;
       current = current.enclosing;

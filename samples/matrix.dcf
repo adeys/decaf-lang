@@ -106,7 +106,7 @@ class SparseMatrix extends Matrix {
     if (elem != null) {
       elem.SetData(value);
     } else {
-      elem = new(SparseItem);
+      elem = new SparseItem();
       elem.Init(value, y, this.m[x]);
       this.m[x] = elem;
     }
@@ -126,14 +126,14 @@ class SparseMatrix extends Matrix {
 void main()  {
   Matrix m;
   print("Dense Rep \n");
-  m = new(DenseMatrix);
+  m = new DenseMatrix();
   m.Init();
   m.SeedMatrix();
   m.printMatrix();
   
   
   print("Sparse Rep \n");
-  m = new(SparseMatrix);
+  m = new SparseMatrix();
   m.Init();
   m.SeedMatrix();
   m.printMatrix();

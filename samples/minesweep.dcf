@@ -107,7 +107,7 @@ class Field
     }
     for(i = 0; i < this.width; i = i + 1) {
       for(j = 0; j < this.height; j = j + 1) {
-        this.arr[i][j] = new(Block);
+        this.arr[i][j] = new Block();
         this.arr[i][j].Init();
       }
     }
@@ -208,7 +208,7 @@ class Game
    Field field;
 
    void Init(int width, int height) {
-     this.field = new(Field);
+     this.field = new Field();
      this.field.Init(width, height);
    }
    
@@ -239,7 +239,7 @@ class Game
         x = readInt();
         if(x >= min && x <= max) {
           if(x == -1) return -1;
-          if(x == -2) this.newHelp();
+          if(x == -2) newHelp();
           else if(x == -3) this.field.newField(false);
           else return x;
         }
@@ -288,7 +288,7 @@ void main()
   int h;
   Game g;
 
-  gRnd = new(rndModule);
+  gRnd = new rndModule();
   print("Please enter in a random seed: ");
   gRnd.Init(readInt());
   print("How much of the field do you want to have mines? (0%-100%) ");
@@ -298,7 +298,7 @@ void main()
   print("How tall do you want the field to be? ");
   h = readInt();
 
-  g = new(Game);
+  g = new Game();
   g.Init(w, h);
   g.PlayGame();  
 }

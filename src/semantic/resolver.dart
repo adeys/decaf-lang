@@ -343,7 +343,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
       return;
     }
     
-    return expr.type = currentClass.type;
+    expr.type = currentClass.type;
   }
 
   @override
