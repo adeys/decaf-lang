@@ -3,28 +3,28 @@ class Person {
     int age;
     string address;
 
-    string getName() {
+    getName(): string {
         return this.name;
     }
 
-    int getAge() {
+    getAge(): int {
         return this.age;
     }
 }
 
-class Employee extends Person {
-    void init(string name, int age, string address) {
+class Employee : Person {
+    init(string name, int age, string address): void {
         this.name = name;
         this.age = age;
         this.address = address;
     }
 
-    string getName() {
+    getName(): string {
         print("Employee name\n");
         return this.name;
     }
 
-    void present() {
+    present(): void {
         if (this.address == "") {
             print("I'm a no-home man.\n");
         } else {
@@ -33,49 +33,57 @@ class Employee extends Person {
     }
 }
 
-class Player extends Person {
-    void init(string name, int age) {
+class Player : Person {
+    string game;
+
+    init(string name, int age): void {
         this.name = name;
         this.age = age;
     }
 
-    string getName() {
+    getName(): string {
         print("Player name\n");
         return this.name;
     }
 }
 
-class Doctor extends Employee {
-    void init(string name, int age, string address) {
+class Doctor : Employee {
+    init(string name, int age, string address): void {
         this.name = name;
         this.age = age;
         this.address = address;
     }
 
-    string getName() {
+    getName(): string {
         print("Doctor name\n");
         return this.name;
     }
 
-    void cure(Person patient) {
+    cure(Person patient): void {
         print("Healing ", patient.name, "\n");
     }
 }
 
-void main() {
+class Foo {
+    string bar;
+
+    getBar(): string { return this.bar; }
+}
+
+func main(): void {
     print("Hello World\n");
 
-    Employee john = new(Employee);
+    Employee john = new Employee();
     john.init("John Doe", 20, "Neverland");
 
     print(john.getName(), " - ", john.getAge(), "\n");
     john.present();
 
-    Player player = new(Player);
+    Player player = new Player();
     player.init("Player", 17);
     player.getName();
 
-    Doctor doc = new(Doctor);
+    Doctor doc = new Doctor();
     doc.getName();
-    doc.cure(doc); 
+    doc.cure(new Employee());
 }

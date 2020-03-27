@@ -88,8 +88,9 @@ class Parser {
   Stmt _getDeclaration() {
     try {
       if (_match([TokenType.CLASS])) return _getClassDeclaration();
+      if (_match([TokenType.FUNC])) return _getFuncDeclaration();
 
-      return _getFieldDeclaration();
+      return _getVarDeclaration();
     } on ParseError catch (e) {
       ErrorReporter.report(e);
       _synchronize();
@@ -97,25 +98,11 @@ class Parser {
     }
   }
 
-  Stmt _getFieldDeclaration() {
-    int index = offset;
-    Type type = _match([TokenType.KW_VOID]) ? BuiltinType.VOID : _expectType();
-    Token name = _expect(TokenType.IDENTIFIER, 'Expect variable name after type.');
-    
-    if (type.name == BuiltinType.VOID.name || _check(TokenType.LEFT_PAREN)) {
-      _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");
-      return _getFuncDeclaration(type, name);
-    }
-
-    offset = index;
-    return _getVarDeclaration();
-  }
-
   ClassStmt _getClassDeclaration() {
     Token name = _expect(TokenType.IDENTIFIER, "Expect class name.");
     Token parent;
     
-    if (_match([TokenType.EXTENDS])) {
+    if (_match([TokenType.COLON])) {
       parent = _expect(TokenType.IDENTIFIER, "Expect parent class name.");
     }
 
@@ -129,6 +116,14 @@ class Parser {
     _expect(TokenType.RIGHT_BRACE, "Expect '}' at class declaration end.");
 
     return new ClassStmt(name, parent, fields, methods);
+  }
+
+  Stmt _getFieldDeclaration() {
+    if (_matchType()) {
+      return _getVarDeclaration();
+    }
+
+    return _getFuncDeclaration();
   }
 
   VarStmt _getVariable() {
@@ -149,9 +144,10 @@ class Parser {
     return stmt;
   }
 
-  FunctionStmt _getFuncDeclaration(Type returnType, Token name) {
-    // Consume parameters list
+  FunctionStmt _getFuncDeclaration() {
+    Token name = _expect(TokenType.IDENTIFIER, 'Expected function name.');
     
+    _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");  
     List<VarStmt> params = [];
     if (!_check(TokenType.RIGHT_PAREN)) {
       do {
@@ -160,11 +156,15 @@ class Parser {
     }
 
     _expect(TokenType.RIGHT_PAREN, "Expect ')' after function parameters list.");
+
+    _expect(TokenType.COLON, "Expected ':' after function parameters list.");
+    Type type = _match([TokenType.KW_VOID]) ? BuiltinType.VOID : _expectType(false);
+
     _expect(TokenType.LEFT_BRACE, "Expect '{' at function body start.");
 
     BlockStmt body = _getBlockStatement();
 
-    return new FunctionStmt(name, params, returnType, body);
+    return new FunctionStmt(name, params, type, body);
   }
 
   // Statements parsing functions
@@ -533,7 +533,7 @@ class Parser {
 
   Type _expectType([bool declare = true]) {
     if (!_matchType(declare)) {
-      throw new ParseError(_peek(), 'Expected type expression.');
+      throw new ParseError(_peek(), 'Expected ${declare ? 'declaration statement' : 'type expression'}.');
     }
 
     _advance();

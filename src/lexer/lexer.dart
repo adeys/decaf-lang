@@ -23,7 +23,6 @@ class Lexer {
     //"interface": TokenType.INTERFACE,
     "null": TokenType.NULL,
     "this": TokenType.THIS,
-    "extends": TokenType.EXTENDS,
     //"implements": TokenType.IMPLEMENTS,
     "for": TokenType.FOR,
     "while": TokenType.WHILE,
@@ -33,6 +32,7 @@ class Lexer {
     "break": TokenType.BREAK,
     "new": TokenType.NEW,
     "array": TokenType.ARRAY,
+    "func": TokenType.FUNC,
     "print": TokenType.PRINT,
     "readInt": TokenType.RD_INT,
     "readLine": TokenType.RD_LINE,
@@ -63,6 +63,7 @@ class Lexer {
       case ',': _addToken(TokenType.COMMA, char); break;
       case '.': _addToken(TokenType.DOT, char); break;
       case ';': _addToken(TokenType.SEMICOLON, char); break;
+      case ':': _addToken(TokenType.COLON, char); break;
       case '+': _addToken(TokenType.PLUS, char); break;
       case '-': _addToken(TokenType.MINUS, char); break;
       case '*': _addToken(TokenType.STAR, char); break;

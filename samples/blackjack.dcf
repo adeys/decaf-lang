@@ -3,16 +3,16 @@ class Random {
 
   int seed;
 
-  void Init(int seedVal) {
+  Init(int seedVal): void {
     this.seed = seedVal;
   }
 
-  int GenRandom() {
+  GenRandom(): int {
     this.seed = (15625 * (this.seed % 10000) + 22221) % 65536;
     return this.seed;
   }
 
-  int RndInt(int max) {
+  RndInt(int max): int {
     return (this.GenRandom() % max);
   }
 
@@ -25,11 +25,11 @@ class Deck {
   int current;
   int[] cards;
 
-  void Init() {
+  Init(): void {
     this.cards = array(52, int);
   }
 
-  void Shuffle() {
+  Shuffle(): void {
     for (this.current = 0; this.current < 52; this.current = this.current + 1) {
       this.cards[this.current] = (this.current + 1) % 13;
     }
@@ -45,7 +45,7 @@ class Deck {
     }
   }
 
-  int GetCard() {
+  GetCard(): int {
     int result;
     if (this.current >= 52) return 0;
     result = this.cards[this.current];
@@ -59,7 +59,7 @@ class BJDeck {
   Deck[] decks;
   int numdealt;
 
-  void Init() {
+  Init(): void {
     int i;
     this.decks = array(8, Deck);
     for (i = 0; i < 8; i = i + 1) {
@@ -68,7 +68,7 @@ class BJDeck {
     }
   }
 
-  int DealCard() {
+  DealCard(): int {
     int c;
     c = 0;
     if (this.numdealt >= 8*52) return 11;
@@ -83,7 +83,7 @@ class BJDeck {
     return c;
   }
 
-  void Shuffle() {
+  Shuffle(): void {
     int i;
 
     print("Shuffling...");
@@ -94,8 +94,7 @@ class BJDeck {
     print("done.\n");
   }
 
-  int NumCardsRemaining()
-  {
+  NumCardsRemaining(): int {
     return 8*52 - this.numdealt;
   }
 }
@@ -108,13 +107,13 @@ class Player {
   int money;
   string name;
 
-  void Init(int num) {
+  Init(int num): void {
     this.money = 1000;
     print("What is the name of player #", num, "? ");
     this.name = readLine();
   }
 
-  void Hit(BJDeck deck) {
+  Hit(BJDeck deck): void {
     int card;
     card = deck.DealCard();
     print(this.name, " was dealt a ", card, ".\n");
@@ -127,7 +126,7 @@ class Player {
     }
   }
 
-  bool DoubleDown(BJDeck deck) {
+  DoubleDown(BJDeck deck): bool {
     int result;
     if ((this.total != 10) && (this.total != 11)) return false;
     if (GetYesOrNo("Would you like to double down?")) {
@@ -139,7 +138,7 @@ class Player {
     return false;
   }
 
-  void TakeTurn(BJDeck deck) {
+  TakeTurn(BJDeck deck): void {
     bool stillGoing;
 
     print("\n", this.name, "'s turn.\n");
@@ -160,13 +159,13 @@ class Player {
     else print(this.name, " stays at ", this.total, ".\n");
   }
 
-  bool HasMoney() { return this.money > 0; }
+  HasMoney(): bool { return this.money > 0; }
 
-  void printMoney() {
+  printMoney(): void {
     print(this.name, ", you have $", this.money, ".\n");
   }
 
-  void PlaceBet() {
+  PlaceBet(): void {
     this.bet = 0;
     this.printMoney();
     while ((this.bet <= 0) || (this.bet > this.money)) {
@@ -175,9 +174,9 @@ class Player {
     }
   }
 
-  int GetTotal() { return this.total;}
+  GetTotal(): int { return this.total;}
 
-  void Resolve(int dealer) {
+  Resolve(int dealer): void {
     int win; int lose;
     win = 0; lose = 0;
     if ((this.total == 21) && (this.numcards == 2)) win = 2;
@@ -194,16 +193,16 @@ class Player {
   }
 }
 
-class Dealer extends Player {
+class Dealer : Player {
 
-  void Init(int id) {
+  Init(int id): void {
     this.total = 0;
     this.aces = 0;
     this.numcards = 0;
     this.name = "Dealer";
   }
 
-  void TakeTurn(BJDeck deck) {
+  TakeTurn(BJDeck deck): void {
     print("\n", this.name, "'s turn.\n");
     while (this.total <= 16) {
       this.Hit(deck);
@@ -221,7 +220,7 @@ class House {
   BJDeck deck;
 
 
-  void SetupGame() {
+  SetupGame(): void {
     print("\nWelcome to CS143 BlackJack!\n");
     print("---------------------------\n");
     gRnd = new Random();
@@ -234,7 +233,7 @@ class House {
     this.deck.Shuffle();
   }
 
-  void SetupPlayers() {
+  SetupPlayers(): void {
     int i;
     int numPlayers;
     print("How many players do we have today? ");
@@ -246,20 +245,20 @@ class House {
     }
   }
 
-  void TakeAllBets() {
+  TakeAllBets(): void {
     int i;
     print("\nFirst, let's take bets.\n");
     for (i = 0; i < this.players.length(); i = i + 1)
       if (this.players[i].HasMoney()) this.players[i].PlaceBet();
   }
 
-  void TakeAllTurns() {
+  TakeAllTurns(): void {
     int i;
     for (i = 0; i < this.players.length(); i = i + 1)
       if (this.players[i].HasMoney()) this.players[i].TakeTurn(this.deck);
   }
 
-  void ResolveAllPlayers() {
+  ResolveAllPlayers(): void {
     int i;
 
     print("\nTime to resolve bets.\n");
@@ -268,7 +267,7 @@ class House {
         this.players[i].Resolve(this.dealer.GetTotal());
   }
 
-  void printAllMoney() {
+  printAllMoney(): void {
     int i;
 
     for (i = 0; i < this.players.length(); i = i + 1)
@@ -276,7 +275,7 @@ class House {
 
   }
 
-  void PlayOneGame() {
+  PlayOneGame(): void {
     if (this.deck.NumCardsRemaining() < 26) this.deck.Shuffle();
     this.TakeAllBets();
     print("\nDealer starts. ");
@@ -289,15 +288,14 @@ class House {
 
 }
 
-bool GetYesOrNo(string prompt)
-{
+func GetYesOrNo(string prompt): bool {
    string answer;
    print(prompt, " (y/n) ");
    answer = readLine();
    return (answer == "y" || answer == "Y");
 }
 
-void main() {
+func main(): void {
   bool keepPlaying;
   House house;
   keepPlaying = true;

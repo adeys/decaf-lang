@@ -1,21 +1,17 @@
-
-
-
-
 class rndModule {
 
   int seed;
 
-  void Init(int seedVal) {
+  Init(int seedVal): void {
     this.seed = seedVal;
   }
 
-  int Random() {
+  Random(): int {
     this.seed = (15625 * (this.seed % 10000) + 22221) % 65536;
     return this.seed;
   }
 
-  int RndInt(int max) {
+  RndInt(int max): int {
     return (this.Random() % max);
   }
 
@@ -29,16 +25,15 @@ class cell
 {
   bool state;
 
-  void Init( bool state)  
-  {
+  Init( bool state): void {
     this.state = state;
   } 
-  bool GetState()
-  {
+
+  GetState(): bool {
     return this.state;
   }
-  void SetState(bool state)
-  {
+
+  SetState(bool state): void {
     this.state = state;
   }
   
@@ -46,31 +41,28 @@ class cell
 
 
 
-class column
-{
+class column {
   int length;
-  cell [] arr;
+  cell[] arr;
 
-  cell GetY(int y)
-  {
+  GetY(int y): cell {
     return this.arr[y];
   }
-  void SetY(int y, cell c)
-  {
+  
+  SetY(int y, cell c): void {
     this.arr[y] = c;
   }
 
   
-  void Init(int length)
-  {
+  Init(int length): void {
     int y;
     this.arr = array(length, cell);
     this.length = length;
-    for(y = 0; y < length; y = y + 1)
-      {
-	this.arr[y] = new cell();
-	this.arr[y].Init(false);
-      }
+    
+    for(y = 0; y < length; y = y + 1) {
+        this.arr[y] = new cell();
+        this.arr[y].Init(false);
+    }
   }
 
 }
@@ -83,8 +75,7 @@ class matrix
   int y_dim;
   column [] col;
 
-  void Init(int x_dim, int y_dim)
-  {
+  Init(int x_dim, int y_dim): void {
     int x;
     int y;
     this.y_dim = y_dim;
@@ -92,18 +83,15 @@ class matrix
 
     this.col = array(x_dim, column);
 
-    for(x = 0; x < x_dim; x = x + 1)
-      {
+    for(x = 0; x < x_dim; x = x + 1) {
         this.col[x] = new column();
 	    this.col[x].Init(y_dim);
-      }
+    }
   }
-  void Set(int x, int y, bool state)
-  {
+
+  Set(int x, int y, bool state): void {
       column mcol;
       cell mcell;
-
-    
 
       if(x < 0 ) return;
       if(x >= this.x_dim) return;
@@ -117,18 +105,15 @@ class matrix
       mcell.SetState(state);
   }
 
-  bool Get(int x, int y)
-  {
+  Get(int x, int y): bool {
     column mcol;
     cell mcell;
 
-    
     if(x < 0 ) return false;
     if(x >= this.x_dim) return false;
 
     if(y < 0 ) return false;
     if(y >= this.y_dim) return false;
-
 
     mcol = this.col[x];
     mcell = mcol.GetY(y);
@@ -143,8 +128,7 @@ class life
 {
   
   matrix current;
- 
-  
+
   matrix m0;
   matrix m1;
 
@@ -154,7 +138,7 @@ class life
   int x_dim;
   int y_dim;
 
-  void Init(int x_dim, int y_dim)
+  Init(int x_dim, int y_dim): void
   {
     int x;
     int y;
@@ -185,8 +169,7 @@ class life
   }
 
   
-  bool SetInit(int x, int y, bool state)
-  {
+  SetInit(int x, int y, bool state): bool {
     
     if(x < 0) return false;
     if(y < 0) return false;
@@ -199,8 +182,7 @@ class life
   }
 
 
-  void printMatrix()
-  {
+  printMatrix(): void {
     int x;
     int y;
     int s;
@@ -232,8 +214,7 @@ class life
   }
 
     
-  void DoLife()
-  {
+  DoLife(): void {
     int x;
     int y;
     
@@ -325,8 +306,7 @@ class life
   }
   
   
-  void runLife(int gen)
-  {
+  runLife(int gen): void {
     int i;
     int iter;
     i = 0;
@@ -354,8 +334,7 @@ class life
 
   }
 
-  void playLife()
-  {
+  playLife(): void {
      int x;
      int y;
      int gen; 
@@ -458,8 +437,7 @@ class life
 
 }
 
-void main()
-{    
+func main(): void {    
     life l;
     l = new life();
 
