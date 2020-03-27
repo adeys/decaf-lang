@@ -43,86 +43,94 @@ class Lexer {
   List<Token> tokenize() {
     while (!isAtEnd()) {
       start = offset;
-      Token token = getToken();
-      if (token.type != TokenType.WHITESPACE && token.type != TokenType.INVALID) tokens.add(token);
+      getToken();
     }
 
     tokens.add(new Token(TokenType.EOF, 'EOF', null, line));
     return tokens;
   }
 
-  Token getToken() {
+  void getToken() {
     String char = _advance();
 
     switch (char) {
-      case '(': return _makeToken(TokenType.LEFT_PAREN, char);
-      case ')': return _makeToken(TokenType.RIGHT_PAREN, char);
-      case '{': return _makeToken(TokenType.LEFT_BRACE, char);
-      case '}': return _makeToken(TokenType.RIGHT_BRACE, char);
-      case '[': return _makeToken(TokenType.LEFT_BRACKET, char);
-      case ']': return _makeToken(TokenType.RIGHT_BRACKET, char);
-      case ',': return _makeToken(TokenType.COMMA, char);
-      case '.': return _makeToken(TokenType.DOT, char);
-      case ';': return _makeToken(TokenType.SEMICOLON, char);
-      case '+': return _makeToken(TokenType.PLUS, char);
-      case '-': return _makeToken(TokenType.MINUS, char);
-      case '*': return _makeToken(TokenType.STAR, char);
-      case '%': return _makeToken(TokenType.PERCENT, char);
+      case '(': _addToken(TokenType.LEFT_PAREN, char); break;
+      case ')': _addToken(TokenType.RIGHT_PAREN, char); break;
+      case '{': _addToken(TokenType.LEFT_BRACE, char); break;
+      case '}': _addToken(TokenType.RIGHT_BRACE, char); break;
+      case '[': _addToken(TokenType.LEFT_BRACKET, char); break;
+      case ']': _addToken(TokenType.RIGHT_BRACKET, char); break;
+      case ',': _addToken(TokenType.COMMA, char); break;
+      case '.': _addToken(TokenType.DOT, char); break;
+      case ';': _addToken(TokenType.SEMICOLON, char); break;
+      case '+': _addToken(TokenType.PLUS, char); break;
+      case '-': _addToken(TokenType.MINUS, char); break;
+      case '*': _addToken(TokenType.STAR, char); break;
+      case '%': _addToken(TokenType.PERCENT, char); break;
       case '/': {
         if (_peek() == '/') {
           while (_peek() != '\n' && !isAtEnd()) _advance();
-          return _makeToken(TokenType.WHITESPACE, '');
+          break;
         }
 
         if (_peek() == "*") {
           _advance();
           _matchMultilineComment();
-          return _makeToken(TokenType.WHITESPACE, '');
+          break;
         }
 
-        return _makeToken(TokenType.SLASH, char);
+        _addToken(TokenType.SLASH, char);
+        break;
       }
       case '!': {
         bool two = _match('=');
-        return _makeToken(two ? TokenType.BANG_EQUAL : TokenType.BANG, two ? '!=' : char);
+        _addToken(two ? TokenType.BANG_EQUAL : TokenType.BANG, two ? '!=' : char);
+        break;
       }
       case '=': {
         bool two = _match('=');
-        return _makeToken(two ? TokenType.EQUAL_EQUAL : TokenType.EQUAL, two ? '==' : char);
+        _addToken(two ? TokenType.EQUAL_EQUAL : TokenType.EQUAL, two ? '==' : char);
+        break;
       }
       case '<': {
         bool two = _match('=');
-        return _makeToken(two ? TokenType.LESS_EQUAL: TokenType.LESS, two ? '<=' : char);
+        _addToken(two ? TokenType.LESS_EQUAL: TokenType.LESS, two ? '<=' : char);
+        break;
       }
       case '>': {
         bool two = _match('=');
-        return _makeToken(two ? TokenType.GREATER_EQUAL : TokenType.GREATER, two ? '>=' : char);
+        _addToken(two ? TokenType.GREATER_EQUAL : TokenType.GREATER, two ? '>=' : char);
+        break;
       }
       case '&': {
-        if (_match('&')) return _makeToken(TokenType.AMP_AMP, '&&');
+        if (_match('&')) _addToken(TokenType.AMP_AMP, '&&');
         break;
       }
       case '|': {
-        if (_match('|')) return _makeToken(TokenType.PIPE_PIPE, '||');
+        if (_match('|')) _addToken(TokenType.PIPE_PIPE, '||');
         break;
       }
-      case '"': return _getString();
+      case '"': _getString(); break;
       case ' ':
       case '\t':
       case '\r':
       case '\b':
-        return _makeToken(TokenType.WHITESPACE, char);
-      case '\n': line++;
-        return _makeToken(TokenType.WHITESPACE, char);
-      default: {
-        if (_isDigit(char)) return _getNumber(char);
-        if (_isAlpha(char)) return _getIdentifier();
         break;
+      case '\n': 
+        line++;
+        break;
+      default: {
+        if (_isDigit(char)) {
+          _getNumber(char);
+          break;
+        } else if (_isAlpha(char)) {
+          _getIdentifier();
+          break;
+        }
+        
+        ErrorReporter.report(new SyntaxError(line, "Unknown token '$char'."));
       }
     }
-
-    ErrorReporter.report(new SyntaxError(line, "Unknown token '$char'."));
-    return _makeToken(TokenType.INVALID, char);
   }
 
   void _matchMultilineComment() {
@@ -142,16 +150,17 @@ class Lexer {
     _matchMultilineComment();
   }
 
-  Token _getIdentifier() {
+  void _getIdentifier() {
     while (_isAlphaNum(_peek())) _advance();
 
     String id = source.substring(start, offset);
     TokenType type = _keywords[id];
 
-    return _makeToken(type ?? TokenType.IDENTIFIER, id);
+    _addToken(type ?? TokenType.IDENTIFIER, id);
+    return;
   }
 
-  Token _getNumber(String first) {
+  void _getNumber(String first) {
     String number = '';
     number += first;
     
@@ -162,13 +171,17 @@ class Lexer {
         number += _advance();
       }
 
-      return _makeToken(TokenType.INTEGER, int.parse(number));
+      _addToken(TokenType.INTEGER, int.parse(number));
+      return;
     }
 
     while (_isDigit(_peek()) && !isAtEnd()) number += _advance();
 
     // If there is not a leading '.' it's an integer constant
-    if (_peek() != '.') return _makeToken(TokenType.INTEGER, int.parse(number));
+    if (_peek() != '.') {
+      _addToken(TokenType.INTEGER, int.parse(number));
+      return;
+    }
     
     // Parse decimal constant
     number += _advance();
@@ -191,10 +204,10 @@ class Lexer {
       }
     }
 
-    return _makeToken(TokenType.DOUBLE, double.parse(number));
+    _addToken(TokenType.DOUBLE, double.parse(number));
   }
 
-  Token _getString() {
+  void _getString() {
     StringBuffer string = new StringBuffer();
     while (_peek() != '\n' && _peek() != '"' && !isAtEnd()) {
       if (_peek() == '\\' && _escapers.contains(_peekNext())) {
@@ -218,11 +231,11 @@ class Lexer {
     // Consume '"'
     _advance();
 
-    return _makeToken(TokenType.STRING, string.toString());
+    _addToken(TokenType.STRING, string.toString());
   }
 
-  Token _makeToken(TokenType type, Object value) {
-    return new Token(type, source.substring(start, offset), value, line);
+  void _addToken(TokenType type, Object value) {
+    tokens.add(new Token(type, source.substring(start, offset), value, line));
   }
 
   bool _match(String char) {
