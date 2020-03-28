@@ -75,6 +75,7 @@ class ArrayType extends Type {
 
   @override
   bool isCompatible(Type type) {
+    // Naive implementation
     return (type is ArrayType) && type.name == name;
   }
   

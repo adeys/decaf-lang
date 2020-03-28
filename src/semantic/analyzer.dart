@@ -130,8 +130,8 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       case '!=':
         Type left = resolveType(expr.left);
         Type right = resolveType(expr.right);
-        if (!left.isCompatible(right)) {
-          ErrorReporter.report(new TypeError(expr.op.line, "Operands to '${expr.op.lexeme}' must be of same type. Got('$left' and '$right')."));
+        if (!left.isCompatible(right) && !right.isCompatible(left)) {
+          ErrorReporter.report(new TypeError(expr.op.line, "Operands to '${expr.op.lexeme}' must be of compatible type. Got('$left' and '$right')."));
           return expr.type = BuiltinType.ERROR;
         }
 
