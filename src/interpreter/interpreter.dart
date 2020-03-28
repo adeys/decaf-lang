@@ -12,6 +12,13 @@ class Break {
   
 }
 
+Map<String, Object> _defaults = {
+  BuiltinType.INT.name: 0,
+  BuiltinType.DOUBLE.name: 0,
+  BuiltinType.BOOL.name: false,
+  BuiltinType.STRING.name: "",
+};
+
 class Interpreter implements StmtVisitor, ExprVisitor {
   SymbolTable symbols;
   Environment _env;
@@ -232,7 +239,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
 
   @override
   visitVarStmt(VarStmt stmt) {
-    Value value = stmt.type is CustomType ? new NullValue() : new Value(stmt.type, null);
+    Value value = stmt.type is NamedType ? new NullValue() : new Value(stmt.type, _defaults[stmt.type.name]);
     if (stmt.initializer != null) {
       value = _evaluate(stmt.initializer);
       value.initialized = true;
@@ -296,6 +303,7 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     if (stmt.parent != null) {
       parent = _globals.getAt(0, stmt.parent.lexeme);
       fields = parent.fields;
+      klass.constructor = parent.constructor;
     }
 
     _env = new Environment(_env);
@@ -310,7 +318,12 @@ class Interpreter implements StmtVisitor, ExprVisitor {
     for (FunctionStmt method in stmt.methods) {
       _execute(method);
       String name = method.name.lexeme;
-      methods[name] = _env.getAt(0, name);
+
+      if (method.isConstruct) {
+        klass.constructor = _env.getAt(0, name);
+      } else {
+        methods[name] = _env.getAt(0, name);
+      }
     }
 
     _env = _env.parent;
@@ -344,8 +357,14 @@ class Interpreter implements StmtVisitor, ExprVisitor {
   @override
   visitNewExpr(NewExpr expr) {
     DecafClass klass = _globals.getAt(0, expr.type.name);
-    
-    return new DecafInstance(expr.type, klass);
+    DecafInstance instance = new DecafInstance(expr.type, klass);
+
+     if (klass.constructor != null) {
+       klass.constructor.bind(instance);
+       klass.constructor.callFun(this, expr.args.map((Expr arg) => this._evaluate(arg)).toList());
+     }
+
+     return instance;
   }
 
   @override

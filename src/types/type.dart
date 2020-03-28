@@ -35,8 +35,9 @@ class FunctionType extends Type {
   String name = 'function';
   Type returnType;
   List<Type> paramsType;
+  bool isConstruct;
 
-  FunctionType(this.returnType, this.paramsType);
+  FunctionType(this.returnType, this.paramsType, this.isConstruct);
 
   @override
   bool isCompatible(Type type) {
@@ -83,15 +84,15 @@ class ArrayType extends Type {
   }
 }
 
-class CustomType extends Type {
+class NamedType extends Type {
   String name;
   Scope scope;
-  CustomType parent;
+  NamedType parent;
 
-  CustomType(this.name);
+  NamedType(this.name);
 
   bool hasParent(String type) {
-    CustomType _class = parent;
+    NamedType _class = parent;
     while (_class != null) {
       if (_class.name == type)
         return true;
@@ -105,10 +106,10 @@ class CustomType extends Type {
   bool isCompatible(Type type) {
     if (type == BuiltinType.NULL) return true;
 
-    if (type is! CustomType) return false;
+    if (type is! NamedType) return false;
 
     return type.name == name
-      || (type as CustomType).hasParent(name);
+      || (type as NamedType).hasParent(name);
   }
   
   @override

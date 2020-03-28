@@ -1,6 +1,4 @@
 class Matrix {
-  Init(): void {}
-  
   Set(int x, int y, int value): void {} 
   
   Get(int x, int y): int {}
@@ -35,7 +33,7 @@ class Matrix {
 class DenseMatrix : Matrix {
   int[][] m;
   
-  Init(): void {
+  construct() {
     int i;
     int j;
 
@@ -64,7 +62,7 @@ class SparseItem {
   int y;
   SparseItem next;
 
-  Init(int d, int y, SparseItem next): void {
+  construct(int d, int y, SparseItem next) {
     this.data = d;
     this.y = y;
     this.next = next;
@@ -81,7 +79,7 @@ class SparseItem {
 class SparseMatrix : Matrix {
   SparseItem[] m;
 
-  Init(): void {
+  construct() {
     int i;
 
     
@@ -109,8 +107,7 @@ class SparseMatrix : Matrix {
     if (elem != null) {
       elem.SetData(value);
     } else {
-      elem = new SparseItem();
-      elem.Init(value, y, this.m[x]);
+      elem = new SparseItem(value, y, this.m[x]);
       this.m[x] = elem;
     }
   }
@@ -130,14 +127,12 @@ func main(): void  {
   Matrix m;
   print("Dense Rep \n");
   m = new DenseMatrix();
-  m.Init();
   m.SeedMatrix();
   m.printMatrix();
   
   
   print("Sparse Rep \n");
   m = new SparseMatrix();
-  m.Init();
   m.SeedMatrix();
   m.printMatrix();
 }

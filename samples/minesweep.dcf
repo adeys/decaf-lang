@@ -4,7 +4,7 @@ class rndModule {
 
   int seed;
 
-  Init(int seedVal): void {
+  construct(int seedVal) {
     this.seed = seedVal;
   }
 
@@ -27,7 +27,7 @@ class Block
   int adjMines;
   bool isUncovered;
 
-  Init(): void {
+  construct() {
      this.hasMine = false;
      this.adjMines = 0;
      this.isUncovered = false;
@@ -88,7 +88,7 @@ class Field
   int numBlocksCleared;
 
 
-  Init(int h, int w): void {
+  construct(int h, int w) {
     int i;
     int j;
 
@@ -104,7 +104,6 @@ class Field
     for(i = 0; i < this.width; i = i + 1) {
       for(j = 0; j < this.height; j = j + 1) {
         this.arr[i][j] = new Block();
-        this.arr[i][j].Init();
       }
     }
     this.PlantMines();
@@ -202,26 +201,27 @@ class Game
 {
    Field field;
 
-   Init(int width, int height): void {
-     this.field = new Field();
-     this.field.Init(width, height);
+   construct(int width, int height) {
+     this.field = new Field(width, height);
    }
    
    PlayGame(): void {
      int x;
      int y;
      while(this.field.HasNotBlownUp() && !this.field.HasClearedEverything()) {
-       this.field.newField(false);
-       x = this.PromptForInt(
-   "Enter horizontal coordinate, -1 to quit, -2 for help, -3 for grid: "
-           , -3, this.field.GetWidth()-1);
-       if(x == -1) break;
-       y = this.PromptForInt(
-           "Enter vertical coordinate, -1 to quit, -2 for help, -3 for grid: "
-           , -3, this.field.GetHeight()-1);
-       if(y == -1) break;
-       print("Clearing (", x, ", ",y, ")\n");
-       this.field.Expand(x, y);
+        this.field.newField(false);
+        x = this.PromptForInt(
+            "Enter horizontal coordinate, -1 to quit, -2 for help, -3 for grid: ", 
+            -3, 
+            this.field.GetWidth() - 1
+        );
+        if(x == -1) break;
+        y = this.PromptForInt(
+            "Enter vertical coordinate, -1 to quit, -2 for help, -3 for grid: "
+            , -3, this.field.GetHeight()-1);
+        if(y == -1) break;
+        print("Clearing (", x, ", ",y, ")\n");
+        this.field.Expand(x, y);
      }
      if(this.field.HasNotBlownUp()) this.AnnounceWin();
      else this.AnnounceLoss();
@@ -281,9 +281,8 @@ func main(): void {
   int h;
   Game g;
 
-  gRnd = new rndModule();
   print("Please enter in a random seed: ");
-  gRnd.Init(readInt());
+  gRnd = new rndModule(readInt());
   print("How much of the field do you want to have mines? (0%-100%) ");
   probOfMine = readInt();
   print("How wide do you want the field to be? ");
@@ -291,7 +290,6 @@ func main(): void {
   print("How tall do you want the field to be? ");
   h = readInt();
 
-  g = new Game();
-  g.Init(w, h);
+  g = new Game(w, h);
   g.PlayGame();  
 }

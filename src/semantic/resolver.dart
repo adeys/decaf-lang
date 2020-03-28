@@ -23,11 +23,8 @@ class Resolver implements StmtVisitor, ExprVisitor {
   FunctionStmt currentFunc;
   LoopScope loop = LoopScope.NONE;
   Symbol currentClass = null;
-  List<int> scopes = [];
 
-  Resolver(this.symbols) {
-    
-  }
+  Resolver(this.symbols);
   
   SymbolTable resolve(List<Stmt> ast) {
     symbols.beginScope(ScopeType.GLOBAL);
@@ -56,7 +53,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
     
     symbols.addSymbol(new Symbol(name.lexeme));
     if (stmt is ClassStmt) {
-      symbols.registerType(new CustomType(stmt.name.lexeme));
+      symbols.registerType(new NamedType(stmt.name.lexeme));
     }
   }
 
@@ -130,7 +127,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     // Declare function
     Symbol symbol = new Symbol(name);
-    symbol.type = new FunctionType(stmt.returnType, stmt.params.map((VarStmt v) => v.type).toList());
+    symbol.type = new FunctionType(stmt.returnType, stmt.params.map((VarStmt v) => v.type).toList(), stmt.isConstruct);
     symbols.setSymbol(name, symbol);
 
     ScopeKind enclosing = scope;
@@ -221,7 +218,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
       symbol.initialized = true;
     }
 
-    symbol.type = stmt.type is CustomType ? symbols.getType(stmt.type.name) :  stmt.type;
+    symbol.type = stmt.type is NamedType ? symbols.getType(stmt.type.name) :  stmt.type;
     symbols.setSymbol(name, symbol);
   }
 
@@ -264,7 +261,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
   @override
   visitClassStmt(ClassStmt stmt) {
     String name = stmt.name.lexeme;
-    CustomType type = symbols.getType(name);
+    NamedType type = symbols.getType(name);
     Symbol symbol = new Symbol(name, type);
     
     currentClass = symbol;
@@ -279,7 +276,7 @@ class Resolver implements StmtVisitor, ExprVisitor {
         if (!symbols.typeExists(stmt.parent.lexeme)) {
           ErrorReporter.report(new SemanticError(stmt.parent, "No declaration for class '${stmt.parent.lexeme}' found."));
         } else {
-          CustomType enclosing = symbols.getType(stmt.parent.lexeme);
+          NamedType enclosing = symbols.getType(stmt.parent.lexeme);
           type.parent = enclosing;
           parent = enclosing.scope;
         }
@@ -292,7 +289,8 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
     for (VarStmt field in stmt.fields) {
       if (hasParent) {
-        if (parent.has(field.name.lexeme)) {
+        // Check propoerty override accross all super classes
+        if (parent.classHas(field.name.lexeme)) {
           ErrorReporter.report(new SemanticError(stmt.parent, "Cannot override inherited property '${field.name.lexeme}' in class '$name'."));
         }
       }
@@ -322,9 +320,15 @@ class Resolver implements StmtVisitor, ExprVisitor {
   visitAccessExpr(AccessExpr expr) {
     _resolve(expr.object);
     
+    // Disallow direct constructor call
+    String field = (expr.field as VariableExpr).name.lexeme;
+    if (field == 'construct') {
+      ErrorReporter.report(new SemanticError(expr.dot, "Cannot directly call class constructor."));
+      return;
+    }
+    
     if (expr.object is VariableExpr) {
       String owner = (expr.object as VariableExpr).name.lexeme;
-      String field = (expr.field as VariableExpr).name.lexeme;
 
       Symbol sym = symbols.getSymbol(owner);
       var init = sym?.initialized;
@@ -348,10 +352,14 @@ class Resolver implements StmtVisitor, ExprVisitor {
 
   @override
   visitNewExpr(NewExpr expr) {
-    if (expr.type is! CustomType) {
+    if (expr.type is! NamedType) {
       ErrorReporter.report(new TypeError(expr.keyword.line, "’${expr.type}’ is not a class."));
       expr.type = BuiltinType.NULL;
       return;
+    }
+
+    for (Expr arg in expr.args) {
+      _resolve(arg);
     }
   }
 

@@ -19,9 +19,9 @@ class Value {
   }
 
   bool equalsTo(Value value) {
-    if (this.type is CustomType && !this.initialized) {
+    if (this.type is NamedType && !this.initialized) {
       return value.type.name == BuiltinType.NULL.name;
-    } else if (value.type is CustomType && !value.initialized) {
+    } else if (value.type is NamedType && !value.initialized) {
       return this.type.name == BuiltinType.NULL.name;
     }
 
@@ -120,6 +120,7 @@ class DecafFunction extends DecafCallable {
 class DecafClass {
   String name;
   Map<String, Value> fields = {};
+  DecafFunction constructor;
   Map<String, DecafFunction> methods = {};
   Environment scope;
   DecafClass parent;

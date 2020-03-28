@@ -1,9 +1,8 @@
 
 class Random {
-
   int seed;
 
-  Init(int seedVal): void {
+  construct(int seedVal) {
     this.seed = seedVal;
   }
 
@@ -25,7 +24,7 @@ class Deck {
   int current;
   int[] cards;
 
-  Init(): void {
+  construct() {
     this.cards = array(52, int);
   }
 
@@ -59,12 +58,11 @@ class BJDeck {
   Deck[] decks;
   int numdealt;
 
-  Init(): void {
+  construct() {
     int i;
     this.decks = array(8, Deck);
     for (i = 0; i < 8; i = i + 1) {
       this.decks[i] = new Deck();
-      this.decks[i].Init();
     }
   }
 
@@ -107,7 +105,7 @@ class Player {
   int money;
   string name;
 
-  Init(int num): void {
+  construct(int num) {
     this.money = 1000;
     print("What is the name of player #", num, "? ");
     this.name = readLine();
@@ -195,7 +193,7 @@ class Player {
 
 class Dealer : Player {
 
-  Init(int id): void {
+  construct(int id) {
     this.total = 0;
     this.aces = 0;
     this.numcards = 0;
@@ -223,13 +221,11 @@ class House {
   SetupGame(): void {
     print("\nWelcome to CS143 BlackJack!\n");
     print("---------------------------\n");
-    gRnd = new Random();
     print("Please enter a random number seed: ");
-    gRnd.Init(readInt());
+    gRnd = new Random(readInt());
  
     this.deck = new BJDeck();
-    this.dealer = new Dealer();
-    this.deck.Init();
+    this.dealer = new Dealer(0);
     this.deck.Shuffle();
   }
 
@@ -240,8 +236,7 @@ class House {
     numPlayers = readInt();
     this.players = array(numPlayers, Player);
     for (i = 0; i < this.players.length(); i = i + 1) {
-      this.players[i] = new Player();
-      this.players[i].Init(i+1);
+      this.players[i] = new Player(i+1);
     }
   }
 
@@ -279,7 +274,6 @@ class House {
     if (this.deck.NumCardsRemaining() < 26) this.deck.Shuffle();
     this.TakeAllBets();
     print("\nDealer starts. ");
-    this.dealer.Init(0);
     this.dealer.Hit(this.deck);
     this.TakeAllTurns();
     this.dealer.TakeTurn(this.deck);

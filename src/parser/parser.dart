@@ -120,51 +120,54 @@ class Parser {
 
   Stmt _getFieldDeclaration() {
     if (_matchType()) {
-      return _getVarDeclaration();
+      return _getVarDeclaration('property');
     }
 
-    return _getFuncDeclaration();
+    return _getFuncDeclaration('method', _peek().lexeme == 'construct');
   }
 
-  VarStmt _getVariable() {
+  VarStmt _getVariable(String kind) {
     Type type = _expectType();
-    Token name = _expect(TokenType.IDENTIFIER, 'Expect variable name after type.');
+    Token name = _expect(TokenType.IDENTIFIER, 'Expect $kind name after type.');
 
     return new VarStmt(type, name, null);
   }
 
-  VarStmt _getVarDeclaration() {
-    VarStmt stmt = _getVariable();
+  VarStmt _getVarDeclaration([String kind = 'variable']) {
+    VarStmt stmt = _getVariable(kind);
 
     if (_match([TokenType.EQUAL])) {
       stmt.initializer = _getExpression();
     }
 
-    _expect(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+    _expect(TokenType.SEMICOLON, "Expect ';' after $kind declaration.");
     return stmt;
   }
 
-  FunctionStmt _getFuncDeclaration() {
-    Token name = _expect(TokenType.IDENTIFIER, 'Expected function name.');
+  FunctionStmt _getFuncDeclaration([String kind = 'function', bool isConstruct = false]) {
+    Token name = _expect(TokenType.IDENTIFIER, 'Expected $kind name.');
     
-    _expect(TokenType.LEFT_PAREN, "Expect '(' after function name in function declaration.");  
+    _expect(TokenType.LEFT_PAREN, "Expect '(' after $kind name in $kind declaration.");  
     List<VarStmt> params = [];
     if (!_check(TokenType.RIGHT_PAREN)) {
       do {
-        params.add(_getVariable());
+        params.add(_getVariable('parameter'));
       } while (_match([TokenType.COMMA]));
     }
 
-    _expect(TokenType.RIGHT_PAREN, "Expect ')' after function parameters list.");
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after $kind parameters list.");
 
-    _expect(TokenType.COLON, "Expected ':' after function parameters list.");
-    Type type = _match([TokenType.KW_VOID]) ? BuiltinType.VOID : _expectType(false);
+    Type type = BuiltinType.VOID;
+    if (!isConstruct) {
+      _expect(TokenType.COLON, "Expected ':' after $kind parameters list.");
+      type = _match([TokenType.KW_VOID]) ? BuiltinType.VOID : _expectType(false);
+    }
 
-    _expect(TokenType.LEFT_BRACE, "Expect '{' at function body start.");
+    _expect(TokenType.LEFT_BRACE, "Expect '{' at $kind body start.");
 
     BlockStmt body = _getBlockStatement();
 
-    return new FunctionStmt(name, params, type, body);
+    return new FunctionStmt(name, params, type, body, isConstruct);
   }
 
   // Statements parsing functions
@@ -301,10 +304,18 @@ class Parser {
     Token keyword = _previous;
 
     Type type = _expectType(false);
+    List<Expr> params = [];
     _expect(TokenType.LEFT_PAREN, "Expect '(' after class name.");
-    _expect(TokenType.RIGHT_PAREN, "Expect ')' after class name.");
+    
+    if (!_check(TokenType.RIGHT_PAREN)) {
+      do {
+        params.add(_getExpression());
+      } while (_match([TokenType.COMMA]));
+    }
+    
+    _expect(TokenType.RIGHT_PAREN, "Expect ')' after constructor parameters.");
 
-    return new NewExpr(keyword, type);
+    return new NewExpr(keyword, type, params);
   }
 
   ReadExpr _getReadExpr() {
@@ -394,7 +405,7 @@ class Parser {
       throw new ParseError(_previous, "Invalid assignment target.");
 
     Token keyword = _previous;
-    Expr value = _getExpression();//_parsePrecedence(Precedence.ASSIGNMENT);
+    Expr value = _getExpression();
 
     return new AssignExpr(keyword, left, value);
   }
@@ -446,14 +457,14 @@ class Parser {
 			switch (_peek().type) {
 				case TokenType.KW_BOOL:
 				case TokenType.KW_INT:
-				case TokenType.KW_VOID:
 				case TokenType.KW_DOUBLE:
 				case TokenType.KW_STRING:
 				case TokenType.CLASS:
-				//case TokenType.IF:
-				//case TokenType.ELSE:
+				case TokenType.FUNC:
+				case TokenType.IF:
+				case TokenType.ELSE:
 				case TokenType.FOR:
-				//case TokenType.WHILE:
+				case TokenType.WHILE:
 				//case TokenType.PRINT:
 				//case TokenType.RETURN:
 					return;
@@ -539,7 +550,7 @@ class Parser {
     _advance();
     Type type = typeMap[_previous.type];
     if (type == null) {
-      type = new CustomType(_previous.lexeme);
+      type = new NamedType(_previous.lexeme);
     }
 
     while (_match([TokenType.LEFT_BRACKET])) {

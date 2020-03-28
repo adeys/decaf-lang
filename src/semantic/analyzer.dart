@@ -397,11 +397,12 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     currentClass = null;
   }
 
-  void _checkOverrides(Map<Token, Symbol> methods, CustomType parent) {
+  void _checkOverrides(Map<Token, Symbol> methods, NamedType parent) {
     for (Token method in methods.keys) {
       Type type = parent.scope.getClassSymbol(method.lexeme)?.type;
       if (type is FunctionType) {
-        if (!type.isMethodCompatible(methods[method].type)) {
+        // Check override only if method is not constructor
+        if (!type.isConstruct && !type.isMethodCompatible(methods[method].type)) {
           ErrorReporter.report(new TypeError(method.line, "Overriden method '${method.lexeme}' signature must be compatible with parent's class one"));
         }
       }
@@ -424,12 +425,12 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       }
     }
 
-    if (type is! CustomType) {
+    if (type is! NamedType) {
       ErrorReporter.report(new TypeError(expr.dot.line, "$type has no such field '$field'."));
       return;
     }
 
-    CustomType target = types.getType(type);
+    NamedType target = types.getType(type);
 
     // Check wether the class has the field
     if (target.scope.classHas(field)) {
@@ -463,7 +464,34 @@ class Analyzer implements StmtVisitor, ExprVisitor {
       return;
     }
 
-    expr.type = types.getNamedType(expr.type.name);
+    NamedType type = types.getNamedType(expr.type.name) as NamedType;
+    expr.type = type;
+
+    if (type.scope.classHas('construct')) {
+      Symbol init = type.scope.getClassSymbol('construct');
+      if (init.type is FunctionType) {
+        FunctionType func = init.type; 
+        // If there is a constructor check its signature
+        if (func.paramsType.length != expr.args.length) {
+          ErrorReporter.report(new TypeError(expr.keyword.line, '$type constructor expects ${func.paramsType.length} arguments but ${expr.args.length} given.'));
+          return expr.type;
+        }
+
+        int line = expr.keyword.line;
+        for (int i = 0; i < func.paramsType.length; i++) {
+          Type param = resolveType(expr.args[i]);
+          if(!func.paramsType[i].isCompatible(param)) {
+            ErrorReporter.report(new TypeError(line, "Incompatible argument ${i + 1}: $param given, ${func.paramsType[i]} expected."));
+          }
+        }
+      }
+    } else {
+      // If the class doesn't have a constructor disallow passing arguments to the new expression
+      if (expr.args.length != 0) {
+        ErrorReporter.report(new TypeError(expr.keyword.line, '$type constructor expects 0 arguments but ${expr.args.length} given.'));
+      }
+    }
+
     return expr.type;
   }
 

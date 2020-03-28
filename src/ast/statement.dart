@@ -129,8 +129,9 @@ class FunctionStmt implements Stmt, DeclStmt {
   Type returnType;
   List<VarStmt> params;
   BlockStmt body;
+  bool isConstruct;
 
-  FunctionStmt(this.name, this.params, this.returnType, this.body);
+  FunctionStmt(this.name, this.params, this.returnType, this.body, this.isConstruct);
 
   @override
   void accept(StmtVisitor visitor) {

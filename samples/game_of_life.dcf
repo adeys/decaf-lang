@@ -2,7 +2,7 @@ class rndModule {
 
   int seed;
 
-  Init(int seedVal): void {
+  construct(int seedVal) {
     this.seed = seedVal;
   }
 
@@ -17,15 +17,11 @@ class rndModule {
 
 }
 
-
-
-
-
 class cell
 {
   bool state;
 
-  Init( bool state): void {
+  construct( bool state) {
     this.state = state;
   } 
 
@@ -54,14 +50,13 @@ class column {
   }
 
   
-  Init(int length): void {
+  construct(int length) {
     int y;
     this.arr = array(length, cell);
     this.length = length;
     
     for(y = 0; y < length; y = y + 1) {
-        this.arr[y] = new cell();
-        this.arr[y].Init(false);
+        this.arr[y] = new cell(false);
     }
   }
 
@@ -75,7 +70,7 @@ class matrix
   int y_dim;
   column [] col;
 
-  Init(int x_dim, int y_dim): void {
+  construct(int x_dim, int y_dim) {
     int x;
     int y;
     this.y_dim = y_dim;
@@ -84,8 +79,7 @@ class matrix
     this.col = array(x_dim, column);
 
     for(x = 0; x < x_dim; x = x + 1) {
-        this.col[x] = new column();
-	    this.col[x].Init(y_dim);
+        this.col[x] = new column(y_dim);
     }
   }
 
@@ -148,14 +142,10 @@ class life
     this.x_dim = x_dim;
     this.y_dim = y_dim;
 
-    this.m0 = new matrix();
-    this.m1 = new matrix();
+    this.m0 = new matrix(x_dim, y_dim);
+    this.m1 = new matrix(x_dim, y_dim);
     
     this.current = this.m0;
-
-    this.m0.Init(x_dim, y_dim);
-    this.m1.Init(x_dim, y_dim);
-
     
     for(y = 0; y < this.y_dim; y = y + 1)
       {
@@ -384,11 +374,7 @@ class life
        print("Please enter an random seed\n");
        x = readInt();
        
-       this.rnd = new rndModule();
-
-       this.rnd.Init(x);
-
-       
+       this.rnd = new rndModule(x);
 	
        gen = this.rnd.RndInt(this.x_dim * this.y_dim);
        

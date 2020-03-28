@@ -116,8 +116,9 @@ class NewExpr implements Expr {
   @override
   Type type;
   Token keyword;
+  List<Expr> args;
 
-  NewExpr(this.keyword, this.type);
+  NewExpr(this.keyword, this.type, this.args);
 
   @override
   Object accept(ExprVisitor visitor) {

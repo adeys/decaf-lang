@@ -13,7 +13,7 @@ class Person {
 }
 
 class Employee : Person {
-    init(string name, int age, string address): void {
+    construct(string name, int age, string address) {
         this.name = name;
         this.age = age;
         this.address = address;
@@ -34,7 +34,9 @@ class Employee : Person {
 }
 
 class Player : Person {
-    init(string name, int age): void {
+    string game;
+
+    construct(string name, int age) {
         this.name = name;
         this.age = age;
     }
@@ -46,10 +48,10 @@ class Player : Person {
 }
 
 class Doctor : Employee {
-    init(string name, int age, string address): void {
-        this.name = name;
+    construct(int age) {
+        this.name = "Doctor";
         this.age = age;
-        this.address = address;
+        this.address = "Hospital";
     }
 
     getName(): string {
@@ -57,24 +59,22 @@ class Doctor : Employee {
         return this.name;
     }
 
-    cure(): void {
-
+    cure(Person patient): void {
+        print("Healing ", patient.name, "\n");
     }
 }
 
 func main(): void {
     print("Hello World\n");
 
-    Employee john = new Employee();
-    john.init("John Doe", 20, "Neverland");
-
+    Employee john = new Employee("John Doe", 20, "Neverland");
     print(john.getName(), " - ", john.getAge(), "\n");
     john.present();
 
-    Player player = new Player();
-    player.init("Player", 17);
+    Player player = new Player("Player", 17);
     player.getName();
 
-    Person doc = new Doctor();
+    Doctor doc = new Doctor(20);
     doc.getName();
+    doc.cure(new Employee("Player", 17, ""));
 }
