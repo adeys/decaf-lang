@@ -218,7 +218,16 @@ class Resolver implements StmtVisitor, ExprVisitor {
       symbol.initialized = true;
     }
 
-    symbol.type = stmt.type is NamedType ? symbols.getType(stmt.type.name) :  stmt.type;
+    if (stmt.type is NamedType) {
+      NamedType type = symbols.getType(stmt.type.name);
+      if (type == null) {
+        ErrorReporter.report(new TypeError(stmt.name.line, "Type '${stmt.type.name}' does not exist."));
+      }
+      symbol.type = type;
+    } else {
+      symbol.type = stmt.type;
+    }
+
     symbols.setSymbol(name, symbol);
   }
 

@@ -195,7 +195,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     for (int i = 0; i < func.paramsType.length; i++) {
       Type param = resolveType(expr.arguments[i]);
       if(!func.paramsType[i].isCompatible(param)) {
-        ErrorReporter.report(new TypeError(line, "Incompatible argument ${i + 1}: $param given, ${func.paramsType[i]} expected."));
+        ErrorReporter.report(new TypeError(line, "Incompatible argument ${i + 1} to ${kind.toLowerCase()} '$name': $param given, ${func.paramsType[i]} expected."));
       }
     }
 
@@ -279,7 +279,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
     for (int i = 0; i < stmt.expressions.length; i++) {
       Type type = resolveType(stmt.expressions[i]);
       if (!allowed.contains(type.name)) {
-        ErrorReporter.report(new TypeError(stmt.keyword.line, "Incompatible argument ${i + 1}: $type given, int/bool/string expected."));
+        ErrorReporter.report(new TypeError(stmt.keyword.line, "Incompatible argument ${i + 1} to 'print': $type given, int/bool/string expected."));
       }
     }
   }
@@ -481,7 +481,7 @@ class Analyzer implements StmtVisitor, ExprVisitor {
         for (int i = 0; i < func.paramsType.length; i++) {
           Type param = resolveType(expr.args[i]);
           if(!func.paramsType[i].isCompatible(param)) {
-            ErrorReporter.report(new TypeError(line, "Incompatible argument ${i + 1}: $param given, ${func.paramsType[i]} expected."));
+            ErrorReporter.report(new TypeError(line, "Incompatible argument ${i + 1} to $type constructor: $param given, ${func.paramsType[i]} expected."));
           }
         }
       }
